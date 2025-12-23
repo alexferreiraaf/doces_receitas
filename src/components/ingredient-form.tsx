@@ -1,12 +1,12 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Ingredient } from '@/lib/types';
 
@@ -47,9 +47,9 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
+            <Controller
               name="name"
+              control={form.control}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nome do Produto</FormLabel>
@@ -61,22 +61,22 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
+              <Controller
                 name="packageQuantity"
+                control={form.control}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Qtd. Embalagem</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 1000" {...field} />
+                      <Input type="number" step="0.01" placeholder="Ex: 1000" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
+              <Controller
                 name="packageUnit"
+                control={form.control}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unidade Base</FormLabel>
@@ -97,14 +97,14 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
+            <Controller
               name="price"
+              control={form.control}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Preço Pago (R$)</FormLabel>
                   <FormControl>
-                     <Input type="number" step="0.01" placeholder="Ex: 5.50" {...field} />
+                     <Input type="number" step="0.01" placeholder="Ex: 5.50" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
