@@ -21,11 +21,25 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
   const [price, setPrice] = useState('');
   const { toast } = useToast();
 
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value === '') {
+      setPrice('');
+      return;
+    }
+    value = (parseInt(value, 10) / 100).toFixed(2);
+    const formattedValue = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(parseFloat(value));
+    setPrice(formattedValue);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const quantityNum = parseFloat(packageQuantity);
-    const priceNum = parseFloat(price);
+    const priceNum = parseFloat(price.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
 
     if (!name.trim()) {
       toast({ title: "Erro", description: "O nome do produto é obrigatório.", variant: "destructive" });
@@ -102,11 +116,10 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
             <Label htmlFor="price">Preço Pago (R$)</Label>
             <Input
               id="price"
-              type="number"
-              step="0.01"
-              placeholder="Ex: 5.50"
+              type="text"
+              placeholder="R$ 0,00"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={handlePriceChange}
             />
           </div>
 
