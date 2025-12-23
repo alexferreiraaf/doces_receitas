@@ -2,16 +2,15 @@
 
 import { useState, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Plus, Save, Trash2, Lightbulb } from 'lucide-react';
+import { Plus, Save, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS } from '@/lib/utils';
-import type { Ingredient, Recipe, RecipeItem, SuggestedRecipe } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { AISuggestionModal } from './ai-suggestion-modal';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[];
@@ -25,7 +24,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
   const [variableCosts, setVariableCosts] = useState(10);
   const [packagingCost, setPackagingCost] = useState(0);
   const [profitMargin, setProfitMargin] = useState(100);
-  const [isAISuggestionOpen, setAISuggestionOpen] = useState(false);
   const { toast } = useToast();
 
   // State for the item form
@@ -107,11 +105,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
     setProfitMargin(100);
   };
   
-  const handleUseSuggestion = (suggestedRecipe: SuggestedRecipe) => {
-    setRecipeName(suggestedRecipe.recipeName);
-    toast({title: "Receita pré-preenchida!", description: "Ajuste as quantidades e unidades conforme necessário."})
-  }
-
   return (
     <div className="space-y-8">
       <Card className="border-t-4 border-primary">
@@ -157,10 +150,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
               <Button type="submit" className="w-full"><Plus className="mr-2 h-4 w-4" /> Add</Button>
             </form>
           </div>
-            <Button variant="outline" className="w-full" onClick={() => setAISuggestionOpen(true)}>
-                <Lightbulb className="mr-2 h-4 w-4 text-yellow-400" />
-                Sugerir receita com IA
-            </Button>
           
           <Table>
             <TableHeader>
@@ -224,13 +213,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
           </div>
         </CardContent>
       </Card>
-      
-      <AISuggestionModal 
-        isOpen={isAISuggestionOpen}
-        setIsOpen={setAISuggestionOpen}
-        ingredients={ingredients}
-        onUseSuggestion={handleUseSuggestion}
-      />
     </div>
   );
 }
