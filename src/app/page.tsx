@@ -13,15 +13,13 @@ export default function Home() {
   const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>('docelucro_insumos', []);
   const [recipes, setRecipes] = useLocalStorage<Recipe[]>('docelucro_receitas', []);
 
-  // State to prevent hydration issues on initial render
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   if (!isClient) {
-    // Render a loading state or nothing on the server and initial client render
-    return null;
+    return null; // Render nothing on the server to avoid hydration mismatch
   }
 
   return (
@@ -44,7 +42,6 @@ export default function Home() {
         </TabsContent>
         <TabsContent value="saved">
           <SavedRecipesTab
-            ingredients={ingredients}
             recipes={recipes}
             setRecipes={setRecipes}
           />

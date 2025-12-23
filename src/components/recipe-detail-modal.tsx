@@ -1,7 +1,7 @@
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, UNIT_LABELS } from '@/lib/utils';
 import type { Recipe } from '@/lib/types';
 import { Separator } from "./ui/separator";
@@ -10,13 +10,15 @@ import { Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface RecipeDetailModalProps {
-  recipe: Recipe;
+  recipe: Recipe | null;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
 }
 
 export function RecipeDetailModal({ recipe, isOpen, setIsOpen }: RecipeDetailModalProps) {
   const { toast } = useToast();
+
+  if (!recipe) return null;
   
   const handleShare = () => {
     const shareableText = `
@@ -46,11 +48,18 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
           <div>
             <h3 className="font-semibold mb-2">Ingredientes</h3>
             <Table>
+               <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Qtd.</TableHead>
+                  <TableHead className="text-right">Custo</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {recipe.items.map(item => (
                   <TableRow key={item.id}>
                     <TableCell>{item.ingredient.name}</TableCell>
-                    <TableCell className="text-center text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
+                    <TableCell className="text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(item.cost)}</TableCell>
                   </TableRow>
                 ))}

@@ -6,17 +6,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { formatCurrency } from '@/lib/utils';
-import type { Ingredient, Recipe } from '@/lib/types';
+import type { Recipe } from '@/lib/types';
 import { RecipeDetailModal } from './recipe-detail-modal';
 import { Trash2 } from 'lucide-react';
 
 interface SavedRecipesTabProps {
-  ingredients: Ingredient[];
   recipes: Recipe[];
   setRecipes: Dispatch<SetStateAction<Recipe[]>>;
 }
 
-export function SavedRecipesTab({ recipes, setRecipes, ingredients }: SavedRecipesTabProps) {
+export function SavedRecipesTab({ recipes, setRecipes }: SavedRecipesTabProps) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   const handleDeleteRecipe = (e: React.MouseEvent, id: string) => {
@@ -36,7 +35,7 @@ export function SavedRecipesTab({ recipes, setRecipes, ingredients }: SavedRecip
           {recipes.map(recipe => (
             <Card 
               key={recipe.id}
-              className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col"
+              className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group"
               onClick={() => setSelectedRecipe(recipe)}
             >
               <CardHeader>
@@ -46,7 +45,7 @@ export function SavedRecipesTab({ recipes, setRecipes, ingredients }: SavedRecip
                 </div>
                 <p className="text-sm text-muted-foreground pt-1">{recipe.items.length} ingredientes</p>
               </CardHeader>
-              <CardContent className="space-y-4 flex-grow flex flex-col justify-between">
+              <CardContent className="space-y-4 flex-grow flex flex-col justify-end">
                 <div className="flex justify-between items-center border-t pt-4">
                   <div>
                     <p className="text-xs text-muted-foreground uppercase">Custo</p>
@@ -57,9 +56,9 @@ export function SavedRecipesTab({ recipes, setRecipes, ingredients }: SavedRecip
                     <p className="font-bold text-green-600">{formatCurrency(recipe.salePrice)}</p>
                   </div>
                 </div>
-                <AlertDialog>
+                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50" onClick={(e) => e.stopPropagation()}>
+                     <Button variant="outline" size="sm" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                       <Trash2 className="h-3 w-3 mr-2"/> Excluir
                     </Button>
                   </AlertDialogTrigger>

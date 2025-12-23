@@ -2,9 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Plus, Save, Trash2, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +12,6 @@ import { formatCurrency, CONVERSION_RATES, UNIT_LABELS } from '@/lib/utils';
 import type { Ingredient, Recipe, RecipeItem, SuggestedRecipe } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AISuggestionModal } from './ai-suggestion-modal';
-
-const recipeItemSchema = z.object({
-  ingredientId: z.string().min(1, 'Selecione um ingrediente'),
-  displayQuantity: z.coerce.number().min(0.01, 'Quantidade inválida'),
-  displayUnit: z.enum(['original', 'xicara', 'colher-sopa', 'colher-cha']),
-});
-
-type RecipeItemFormValues = z.infer<typeof recipeItemSchema>;
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[];
@@ -39,29 +28,39 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
   const [isAISuggestionOpen, setAISuggestionOpen] = useState(false);
   const { toast } = useToast();
 
-  const itemForm = useForm<RecipeItemFormValues>({
-    resolver: zodResolver(recipeItemSchema),
-    defaultValues: { ingredientId: '', displayQuantity: undefined, displayUnit: 'original' },
-  });
+  // State for the item form
+  const [selectedIngredientId, setSelectedIngredientId] = useState('');
+  const [displayQuantity, setDisplayQuantity] = useState('');
+  const [displayUnit, setDisplayUnit] = useState<'original' | 'xicara' | 'colher-sopa' | 'colher-cha'>('original');
 
-  const handleAddItem = (data: RecipeItemFormValues) => {
-    const ingredient = ingredients.find(i => i.id === data.ingredientId);
-    if (!ingredient) return;
+  const handleAddItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    const ingredient = ingredients.find(i => i.id === selectedIngredientId);
+    const quantity = parseFloat(displayQuantity);
+
+    if (!ingredient || !quantity || quantity <= 0) {
+      toast({ title: 'Erro', description: 'Selecione um ingrediente e uma quantidade válida.', variant: 'destructive'});
+      return;
+    }
     
-    const baseQuantity = data.displayQuantity * CONVERSION_RATES[data.displayUnit];
+    const baseQuantity = quantity * CONVERSION_RATES[displayUnit];
     const cost = (ingredient.price / ingredient.packageQuantity) * baseQuantity;
 
     const newItem: RecipeItem = {
       id: Date.now().toString(),
       ingredient,
-      displayQuantity: data.displayQuantity,
-      displayUnit: data.displayUnit,
+      displayQuantity: quantity,
+      displayUnit: displayUnit,
       baseQuantity,
       cost,
     };
 
     setItems(prev => [...prev, newItem]);
-    itemForm.reset();
+    
+    // Reset item form
+    setSelectedIngredientId('');
+    setDisplayQuantity('');
+    setDisplayUnit('original');
   };
 
   const handleRemoveItem = (id: string) => {
@@ -134,44 +133,29 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
           </div>
           
           <div className="bg-muted/50 p-4 rounded-lg border">
-            <form onSubmit={itemForm.handleSubmit(handleAddItem)} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-              <Controller
-                name="ingredientId"
-                control={itemForm.control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger><SelectValue placeholder="Ingrediente..." /></SelectTrigger>
-                    <SelectContent>
-                      {ingredients.map(ing => (
-                        <SelectItem key={ing.id} value={ing.id}>{ing.name} ({ing.packageUnit})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <Controller
-                name="displayQuantity"
-                control={itemForm.control}
-                render={({ field }) => <Input type="number" step="0.01" placeholder="Qtd" {...field} />}
-              />
-              <Controller
-                name="displayUnit"
-                control={itemForm.control}
-                render={({ field }) => (
-                   <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(UNIT_LABELS).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+            <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+              <Select onValueChange={setSelectedIngredientId} value={selectedIngredientId}>
+                <SelectTrigger><SelectValue placeholder="Ingrediente..." /></SelectTrigger>
+                <SelectContent>
+                  {ingredients.map(ing => (
+                    <SelectItem key={ing.id} value={ing.id}>{ing.name} ({ing.packageUnit})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Input type="number" step="0.01" placeholder="Qtd" value={displayQuantity} onChange={e => setDisplayQuantity(e.target.value)} />
+              
+              <Select onValueChange={(v: 'original' | 'xicara' | 'colher-sopa' | 'colher-cha') => setDisplayUnit(v)} value={displayUnit}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(UNIT_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button type="submit" className="w-full"><Plus className="mr-2 h-4 w-4" /> Add</Button>
             </form>
-            {itemForm.formState.errors.ingredientId && <p className="text-destructive text-xs mt-1">{itemForm.formState.errors.ingredientId.message}</p>}
-            {itemForm.formState.errors.displayQuantity && <p className="text-destructive text-xs mt-1">{itemForm.formState.errors.displayQuantity.message}</p>}
           </div>
             <Button variant="outline" className="w-full" onClick={() => setAISuggestionOpen(true)}>
                 <Lightbulb className="mr-2 h-4 w-4 text-yellow-400" />
