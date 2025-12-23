@@ -6,11 +6,25 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(value: number) {
+  if (isNaN(value)) {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(0);
+  }
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(value);
 }
+
+export function parseCurrency(value: string | number): number {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  const numberString = value.replace(/R\$\s?/, '').replace(/\./g, '').replace(',', '.');
+  return parseFloat(numberString) || 0;
+}
+
 
 export const CONVERSION_RATES = {
   'original': 1,
@@ -25,3 +39,5 @@ export const UNIT_LABELS = {
   'colher-sopa': 'Colher Sopa (15g/ml)',
   'colher-cha': 'Colher Chá (5g/ml)',
 }
+
+    

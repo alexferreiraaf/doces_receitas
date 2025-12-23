@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, CONVERSION_RATES, UNIT_LABELS } from '@/lib/utils';
+import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency } from '@/lib/utils';
 import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,7 +30,7 @@ export function RecipeBuilder({
   const [recipeName, setRecipeName] = useState('');
   const [items, setItems] = useState<RecipeItem[]>([]);
   const [variableCosts, setVariableCosts] = useState(10);
-  const [packagingCost, setPackagingCost] = useState(0);
+  const [packagingCost, setPackagingCost] = useState('');
   const [profitMargin, setProfitMargin] = useState(100);
   const { toast } = useToast();
 
@@ -46,12 +46,22 @@ export function RecipeBuilder({
       setRecipeName(recipeToEdit.name);
       setItems(recipeToEdit.items);
       setVariableCosts(recipeToEdit.variableCostsPercentage);
-      setPackagingCost(recipeToEdit.packagingCost);
+      setPackagingCost(formatCurrency(recipeToEdit.packagingCost));
       setProfitMargin(recipeToEdit.profitMargin);
     } else {
       resetForm();
     }
   }, [recipeToEdit]);
+
+  const handlePackagingCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value === '') {
+      setPackagingCost('');
+      return;
+    }
+    const numberValue = parseInt(value, 10) / 100;
+    setPackagingCost(formatCurrency(numberValue));
+  };
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,8 +103,9 @@ export function RecipeBuilder({
   };
   
   const calculations = useMemo(() => {
+    const numericPackagingCost = parseCurrency(packagingCost);
     const ingredientsCost = items.reduce((acc, item) => acc + item.cost, 0);
-    const totalCost = ingredientsCost * (1 + variableCosts / 100) + packagingCost;
+    const totalCost = ingredientsCost * (1 + variableCosts / 100) + numericPackagingCost;
     const salePrice = totalCost * (1 + profitMargin / 100);
     return { ingredientsCost, totalCost, salePrice };
   }, [items, variableCosts, packagingCost, profitMargin]);
@@ -103,7 +114,7 @@ export function RecipeBuilder({
     setRecipeName('');
     setItems([]);
     setVariableCosts(10);
-    setPackagingCost(0);
+    setPackagingCost('');
     setProfitMargin(100);
     setSelectedIngredientId('');
     setDisplayQuantity('');
@@ -129,7 +140,7 @@ export function RecipeBuilder({
       name: recipeName,
       items,
       variableCostsPercentage: variableCosts,
-      packagingCost,
+      packagingCost: parseCurrency(packagingCost),
       profitMargin,
       totalCost: calculations.totalCost,
       salePrice: calculations.salePrice,
@@ -239,7 +250,12 @@ export function RecipeBuilder({
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Embalagem (R$)</label>
-              <Input type="number" step="0.01" value={packagingCost} onChange={e => setPackagingCost(Number(e.target.value) || 0)} />
+              <Input 
+                type="text" 
+                placeholder="R$ 0,00"
+                value={packagingCost} 
+                onChange={handlePackagingCostChange} 
+              />
             </div>
           </div>
         </CardContent>
@@ -271,3 +287,5 @@ export function RecipeBuilder({
     </div>
   );
 }
+
+    
