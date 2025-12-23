@@ -15,9 +15,10 @@ interface CreateRecipeTabProps {
   setRecipes: Dispatch<SetStateAction<Recipe[]>>;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
+  onClearEdit: () => void;
 }
 
-export function CreateRecipeTab({ ingredients, setIngredients, recipes, setRecipes, recipeToEdit, onRecipeSaved }: CreateRecipeTabProps) {
+export function CreateRecipeTab({ ingredients, setIngredients, recipes, setRecipes, recipeToEdit, onRecipeSaved, onClearEdit }: CreateRecipeTabProps) {
   
   const handleAddIngredient = (ingredient: Omit<Ingredient, 'id'>) => {
     const newIngredient = { ...ingredient, id: Date.now().toString() };
@@ -41,6 +42,7 @@ export function CreateRecipeTab({ ingredients, setIngredients, recipes, setRecip
           setRecipes={setRecipes}
           recipeToEdit={recipeToEdit}
           onRecipeSaved={onRecipeSaved}
+          onClearEdit={onClearEdit}
         />
       </div>
     </div>

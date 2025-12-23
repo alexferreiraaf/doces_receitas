@@ -3,17 +3,15 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Plus, Save, Trash2 } from 'lucide-react';
+import { Plus, Save, Trash2, XCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS } from '@/lib/utils';
-import type { Ingredient, Recipe, RecipeItem, SuggestedRecipe } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { AISuggestionModal } from './ai-suggestion-modal';
-import { Wand2 } from 'lucide-react';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[];
@@ -21,9 +19,10 @@ interface RecipeBuilderProps {
   setRecipes: Dispatch<SetStateAction<Recipe[]>>;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
+  onClearEdit: () => void;
 }
 
-export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, onRecipeSaved }: RecipeBuilderProps) {
+export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, onRecipeSaved, onClearEdit }: RecipeBuilderProps) {
   const [recipeId, setRecipeId] = useState<string | null>(null);
   const [recipeName, setRecipeName] = useState('');
   const [items, setItems] = useState<RecipeItem[]>([]);
@@ -36,6 +35,8 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
   const [displayQuantity, setDisplayQuantity] = useState('');
   const [displayUnit, setDisplayUnit] = useState<'original' | 'xicara' | 'colher-sopa' | 'colher-cha'>('original');
+
+  const isEditing = !!recipeToEdit;
 
   useEffect(() => {
     if (recipeToEdit) {
@@ -104,6 +105,11 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
     setDisplayUnit('original');
   }
 
+  const handleCancelEdit = () => {
+    resetForm();
+    onClearEdit();
+  }
+
   const handleSaveRecipe = () => {
     if (!recipeName) {
       toast({ title: 'Erro', description: 'Dê um nome para a sua receita.', variant: 'destructive' });
@@ -146,9 +152,14 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
     <div className="space-y-8">
       <Card className="border-t-4 border-primary">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="font-headline text-xl">2. Montar Receita</CardTitle>
-            <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {recipeId ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
+          <div className="flex flex-wrap gap-4 justify-between items-center">
+            <CardTitle className="font-headline text-xl">
+              {isEditing ? 'Editando Receita' : '2. Montar Receita'}
+            </CardTitle>
+            <div className="flex gap-2">
+              {isEditing && <Button onClick={handleCancelEdit} size="sm" variant="outline"><XCircle className="mr-2 h-4 w-4"/>Cancelar</Button>}
+              <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {recipeId ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -163,8 +174,8 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
           </div>
           
           <div className="bg-muted/50 p-4 rounded-lg border">
-            <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div className='space-y-1'>
+            <form onSubmit={handleAddItem} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <div className='space-y-1 sm:col-span-2 lg:col-span-1'>
                 <label className="text-xs font-medium text-muted-foreground">Ingrediente</label>
                 <Select onValueChange={setSelectedIngredientId} value={selectedIngredientId}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -198,31 +209,33 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
           </div>
           
           <div className="max-h-60 overflow-y-auto pr-2">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-center">Qtd</TableHead>
-                  <TableHead className="text-right">Custo</TableHead>
-                  <TableHead className="w-12 text-center">Ação</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">Adicione ingredientes à sua receita.</TableCell></TableRow>}
-                {items.map(item => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.ingredient.name}</TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
-                    <TableCell className="text-center">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <div className="relative overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="text-center">Qtd</TableHead>
+                    <TableHead className="text-right">Custo</TableHead>
+                    <TableHead className="w-12 text-center">Ação</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">Adicione ingredientes à sua receita.</TableCell></TableRow>}
+                  {items.map(item => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium whitespace-nowrap">{item.ingredient.name}</TableCell>
+                      <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
+                      <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
+                      <TableCell className="text-center">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-6">
@@ -240,22 +253,22 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
 
       <Card className="bg-primary text-primary-foreground shadow-xl">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center items-center">
             <div>
               <p className="text-primary-foreground/70 text-xs font-bold uppercase">Custo de Produção</p>
-              <p className="text-3xl font-bold">{formatCurrency(calculations.totalCost)}</p>
+              <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.totalCost)}</p>
             </div>
             <div>
               <p className="text-primary-foreground/70 text-xs font-bold uppercase">Sugestão de Venda</p>
-              <p className="text-3xl font-bold">{formatCurrency(calculations.salePrice)}</p>
+              <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.salePrice)}</p>
             </div>
-            <div>
-              <p className="text-primary-foreground/70 text-xs font-bold uppercase">Margem Lucro (%)</p>
+            <div className='max-w-40 mx-auto'>
+              <p className="text-primary-foreground/70 text-xs font-bold uppercase mb-1">Margem Lucro (%)</p>
               <Input 
                 type="number" 
                 value={profitMargin} 
                 onChange={e => setProfitMargin(Number(e.target.value) || 0)}
-                className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-xl font-bold mt-1 h-12"
+                className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-xl font-bold h-12"
               />
             </div>
           </div>

@@ -10,6 +10,8 @@ import { formatCurrency } from '@/lib/utils';
 import type { Recipe } from '@/lib/types';
 import { RecipeDetailModal } from './recipe-detail-modal';
 import { Pencil, Trash2 } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface SavedRecipesTabProps {
   recipes: Recipe[];
@@ -30,6 +32,16 @@ export function SavedRecipesTab({ recipes, setRecipes, onEditRecipe }: SavedReci
     onEditRecipe(recipe);
   }
 
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "dd/MM/yyyy");
+    } catch (e) {
+      // Fallback for old date format if any
+      return dateString;
+    }
+  }
+
+
   return (
     <>
       {recipes.length === 0 ? (
@@ -48,7 +60,7 @@ export function SavedRecipesTab({ recipes, setRecipes, onEditRecipe }: SavedReci
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="font-headline text-lg">{recipe.name}</CardTitle>
-                    <span className="text-xs text-muted-foreground">{recipe.createdAt}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(recipe.createdAt)}</span>
                   </div>
                   <p className="text-sm text-muted-foreground pt-1">{recipe.items.length} ingredientes</p>
                 </CardHeader>

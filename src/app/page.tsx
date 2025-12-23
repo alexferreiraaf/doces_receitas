@@ -31,6 +31,10 @@ export default function Home() {
     setActiveTab('saved');
   }
 
+  const handleClearEdit = () => {
+    setRecipeToEdit(null);
+  }
+
   if (!isClient) {
     return null; // Render nothing on the server to avoid hydration mismatch
   }
@@ -53,6 +57,7 @@ export default function Home() {
             setRecipes={setRecipes}
             recipeToEdit={recipeToEdit}
             onRecipeSaved={handleRecipeSaved}
+            onClearEdit={handleClearEdit}
           />
         </TabsContent>
         <TabsContent value="saved">

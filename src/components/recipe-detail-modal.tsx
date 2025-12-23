@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -8,6 +9,8 @@ import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
 import { Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface RecipeDetailModalProps {
   recipe: Recipe | null;
@@ -19,6 +22,15 @@ export function RecipeDetailModal({ recipe, isOpen, setIsOpen }: RecipeDetailMod
   const { toast } = useToast();
 
   if (!recipe) return null;
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "'Salva em' dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    } catch (e) {
+      // Fallback for old date format if any
+      return `Salva em ${dateString}`;
+    }
+  }
   
   const handleShare = () => {
     const shareableText = `
@@ -41,30 +53,32 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl text-primary">{recipe.name}</DialogTitle>
-          <DialogDescription>Salva em {recipe.createdAt}</DialogDescription>
+          <DialogDescription>{formatDate(recipe.createdAt)}</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[60vh] overflow-y-auto pr-4 space-y-6">
           <div>
             <h3 className="font-semibold mb-2">Ingredientes</h3>
-            <Table>
-               <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Qtd.</TableHead>
-                  <TableHead className="text-right">Custo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recipe.items.map(item => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.ingredient.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(item.cost)}</TableCell>
+            <div className="relative overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Qtd.</TableHead>
+                    <TableHead className="text-right">Custo</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recipe.items.map(item => (
+                    <TableRow key={item.id}>
+                      <TableCell className="whitespace-nowrap">{item.ingredient.name}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
+                      <TableCell className="text-right font-semibold whitespace-nowrap">{formatCurrency(item.cost)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           <div>
@@ -90,8 +104,8 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
             </div>
           </div>
           
-          <div className="bg-green-100/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg flex justify-between items-center">
-            <div>
+          <div className="bg-green-100/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-center sm:text-left">
               <p className="text-xs text-green-700 dark:text-green-300 font-bold uppercase">Preço de Venda Sugerido</p>
               <p className="text-sm text-green-600 dark:text-green-400">(Margem de {recipe.profitMargin}%)</p>
             </div>
