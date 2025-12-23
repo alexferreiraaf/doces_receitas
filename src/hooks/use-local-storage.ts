@@ -1,33 +1,42 @@
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
-function getValue<T>(key: string, defaultValue: T): T {
-  // This function will only be called on the client side,
-  // after the component has mounted.
+// This function safely gets a value from localStorage on the client.
+function getStoredValue<T>(key: string, defaultValue: T): T {
+  // Ensure this only runs on the client
+  if (typeof window === 'undefined') {
+    return defaultValue;
+  }
+  
   const saved = localStorage.getItem(key);
   if (saved) {
     try {
       return JSON.parse(saved) as T;
     } catch (e) {
       console.error('Error parsing JSON from localStorage', e);
+      // If parsing fails, fall back to the default value
       return defaultValue;
     }
   }
   return defaultValue;
 }
 
-export function useLocalStorage<T>(key:string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+export function useLocalStorage<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  // Initialize state with the default value. This is what will be used on the server
+  // and during the initial client render, preventing hydration mismatches.
   const [value, setValue] = useState<T>(defaultValue);
 
-  // useEffect to read from localStorage only on the client side after mount
+  // After the component mounts on the client, useEffect runs and safely
+  // reads the value from localStorage, updating the state if necessary.
   useEffect(() => {
-    setValue(getValue(key, defaultValue));
+    setValue(getStoredValue(key, defaultValue));
   }, [key, defaultValue]);
 
+  // This effect runs whenever the value changes, saving the new value to localStorage.
+  // It's also guarded to only run on the client.
   useEffect(() => {
-    // This effect runs whenever the value changes, to update localStorage.
-    // It is guarded against running on the server.
     if (typeof window !== 'undefined') {
       localStorage.setItem(key, JSON.stringify(value));
     }

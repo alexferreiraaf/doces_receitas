@@ -1,12 +1,13 @@
+
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Ingredient } from '@/lib/types';
 
@@ -47,9 +48,9 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <Controller
-              name="name"
+            <FormField
               control={form.control}
+              name="name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nome do Produto</FormLabel>
@@ -61,9 +62,9 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-              <Controller
-                name="packageQuantity"
+              <FormField
                 control={form.control}
+                name="packageQuantity"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Qtd. Embalagem</FormLabel>
@@ -74,9 +75,9 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
                   </FormItem>
                 )}
               />
-              <Controller
-                name="packageUnit"
+              <FormField
                 control={form.control}
+                name="packageUnit"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unidade Base</FormLabel>
@@ -97,9 +98,9 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
                 )}
               />
             </div>
-            <Controller
-              name="price"
+            <FormField
               control={form.control}
+              name="price"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Preço Pago (R$)</FormLabel>
