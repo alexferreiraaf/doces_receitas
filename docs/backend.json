@@ -1,0 +1,149 @@
+{
+  "entities": {
+    "Ingredient": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Ingredient",
+      "type": "object",
+      "description": "Represents an ingredient used in recipes.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ingredient."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the ingredient (e.g., Flour)."
+        },
+        "quantityPackage": {
+          "type": "number",
+          "description": "Quantity of the ingredient in a package."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measure for the ingredient (e.g., g, ml, unit)."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the ingredient package."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "quantityPackage",
+        "unit",
+        "price"
+      ]
+    },
+    "Recipe": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Recipe",
+      "type": "object",
+      "description": "Represents a recipe with its ingredients and cost details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the recipe."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the recipe (e.g., Chocolate Cake)."
+        },
+        "dateCreated": {
+          "type": "string",
+          "description": "Date when the recipe was created.",
+          "format": "date-time"
+        },
+        "ingredientList": {
+          "type": "array",
+          "description": "List of ingredients used in the recipe.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalCost": {
+          "type": "number",
+          "description": "Total cost of producing the recipe."
+        },
+        "suggestedPrice": {
+          "type": "number",
+          "description": "Suggested selling price for the recipe."
+        },
+        "variableCostsPercentage": {
+          "type": "number",
+          "description": "Percentage of variable costs associated with the recipe."
+        },
+        "packagingCost": {
+          "type": "number",
+          "description": "Cost of packaging for the recipe."
+        },
+        "profitMargin": {
+          "type": "number",
+          "description": "Profit margin percentage for the recipe."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "dateCreated",
+        "ingredientList",
+        "totalCost",
+        "suggestedPrice",
+        "variableCostsPercentage",
+        "packagingCost",
+        "profitMargin"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/ingredients/{ingredientId}",
+        "definition": {
+          "entityName": "Ingredient",
+          "schema": {
+            "$ref": "#/backend/entities/Ingredient"
+          },
+          "description": "Stores ingredient data specific to a user. All ingredients are owned by the user. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the ingredient."
+            },
+            {
+              "name": "ingredientId",
+              "description": "The ID of the ingredient."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/recipes/{recipeId}",
+        "definition": {
+          "entityName": "Recipe",
+          "schema": {
+            "$ref": "#/backend/entities/Recipe"
+          },
+          "description": "Stores recipe data specific to a user. All recipes are owned by the user. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the recipe."
+            },
+            {
+              "name": "recipeId",
+              "description": "The ID of the recipe."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "Based on the provided information, the application \"Doce Estimativa\" manages ingredients and recipes, calculates costs and profit margins. The structure is designed to optimize for the following use cases: Ingredient Inventory, Recipe Creation, Cost Calculation, Profit Margin Calculation, Recipe Generation, and Recipe Sharing.\n\nThe data structure enforces Authorization Independence by storing all data related to a user's recipes and ingredients under their respective `userId`. This eliminates the need for complex `get()` calls in security rules to validate ownership. The segregation of data by user ID supports the QAP by ensuring that list operations only return data accessible to the requesting user.\n\n**Data Structure Justification:**\n\n1.  **Ingredients (per User):** Ingredients are stored under `/users/{userId}/ingredients/{ingredientId}`. This provides clear ownership and simplifies security rules. All ingredient data is private to the user who created it. \n\n2.  **Recipes (per User):** Recipes are stored under `/users/{userId}/recipes/{recipeId}`. Similar to ingredients, this provides explicit ownership and simplifies security rules. All recipe data is private to the user. Each recipe will contain the `ingredientList` which stores the IDs of ingredients used in the recipe. A read operation on a recipe will require that user to have access to all ingredients referenced in the `ingredientList` for accurate cost calculations. The `ingredientList` maintains the referential integrity of the data structure.\n\n**Authorization Independence & QAPs:**\n\n*   **Authorization Independence:** By nesting ingredients and recipes under the user ID, we ensure that all authorization checks are based on the path. There is no need to `get()` data from other documents to determine access, as the user ID in the path inherently grants ownership.\n*   **QAPs:** The path-based ownership model enables secure `list` operations. Security rules can easily restrict listing to only the resources owned by the authenticated user (`request.auth.uid == userId`).\n\n**Future Considerations:**\n*   For shared recipes, consider creating a separate `/shared_recipes/{sharedRecipeId}` collection. The document would include a list of `member` user IDs who have access to it."
+  }
+}

@@ -1,0 +1,140 @@
+/**
+ * # Firestore Security Rules
+ *
+ * ## Core Philosophy
+ * This ruleset enforces a strict user-ownership model. All application data,
+ * including ingredients and recipes, is considered private and is exclusively
+ * accessible by the user who created it. There is no concept of public or
+ * shared data in this model.
+ *
+ * ## Data Structure
+ * The data is organized hierarchically under a top-level `users` collection.
+ * All user-specific data is nested within their unique document path, for example:
+ * `/users/{userId}/ingredients/{ingredientId}`. This structure inherently links
+ * every piece of data to its owner, simplifying authorization checks.
+ *
+ * ## Key Security Decisions
+ * - **Strict Authentication**: All access to the database requires a signed-in user.
+ *   Anonymous access is not permitted for any operation.
+ * - **Data Privacy by Default**: Users can only read, write, and delete data
+ *   within their own data tree (i.e., under their own `/users/{userId}` path).
+ * - **No User Enumeration**: The rules do not allow listing documents in the
+ *   top-level `/users` collection, preventing enumeration of other users.
+ * - **Denormalization for Authorization**: The path-based security model (`/users/{userId}/...`)
+ *   is the primary method for authorization. This avoids slow and costly `get()`
+ *   calls to other documents to verify ownership, resulting in faster and more
+ *   scalable rules.
+ * - **Relational Integrity**: On creation, rules ensure that the document's internal
+ *   `id` field matches the document ID in the path. On update, this `id` is enforced
+ *   as immutable, preventing re-linking of documents.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the primary function for verifying document ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the document being accessed already exists in Firestore.
+     * Used to prevent updates or deletes on non-existent documents.
+     */
+    function isExistingDocument() {
+      return resource != null;
+    }
+    
+    /**
+     * A composite check for state-changing operations (update, delete).
+     * Verifies that the user is the owner AND that the document exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && isExistingDocument();
+    }
+    
+    /**
+     * Validates that the internal 'id' field of a new document matches its document ID in the path.
+     * This enforces consistency between the data and its location.
+     */
+    function hasMatchingIdOnCreate(docId) {
+      return request.resource.data.id == docId;
+    }
+    
+    /**
+     * Validates that the internal 'id' field of a document is not being changed during an update.
+     * This makes the core identifier immutable.
+     */
+    function hasImmutableId() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    // -------------------------------------------------------------------------
+    // User Data Tree
+    // -------------------------------------------------------------------------
+
+    match /users/{userId} {
+      /**
+       * @description A user's root document. This path is a container and direct
+       *              access to it is disallowed to prevent user enumeration.
+       * @path /users/{userId}
+       * @allow (none) - No operations are permitted on this path directly.
+       * @deny (any) User trying to read, create, or delete another user's root document.
+       * @principle Prevents user enumeration and secures the root of a user's data tree.
+       */
+      allow read, write: if false;
+
+      // -------------------------------------------------------------------------
+      // User Ingredients Collection
+      // -------------------------------------------------------------------------
+      /**
+       * @description Secures the 'ingredients' subcollection for a user.
+       *              Only the owner of this data tree can access these documents.
+       * @path /users/{userId}/ingredients/{ingredientId}
+       * @allow (create) An authenticated user creating an ingredient under their own userId path.
+       * @deny (get) A user trying to read an ingredient from another user's path.
+       * @principle Enforces strict data ownership within a user's private data tree.
+       */
+      match /ingredients/{ingredientId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasMatchingIdOnCreate(ingredientId);
+        allow update: if isExistingOwner(userId) && hasImmutableId();
+        allow delete: if isExistingOwner(userId);
+      }
+
+      // -------------------------------------------------------------------------
+      // User Recipes Collection
+      // -------------------------------------------------------------------------
+      /**
+       * @description Secures the 'recipes' subcollection for a user.
+       *              Only the owner of this data tree can access these documents.
+       * @path /users/{userId}/recipes/{recipeId}
+       * @allow (list) An authenticated user listing their own recipes.
+       * @deny (update) A user trying to modify a recipe belonging to someone else.
+       * @principle Enforces strict data ownership within a user's private data tree.
+       */
+      match /recipes/{recipeId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasMatchingIdOnCreate(recipeId);
+        allow update: if isExistingOwner(userId) && hasImmutableId();
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+  }
+}
