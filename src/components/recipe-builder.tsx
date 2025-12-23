@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS } from '@/lib/utils';
-import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem, SuggestedRecipe } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { AISuggestionModal } from './ai-suggestion-modal';
+import { Wand2 } from 'lucide-react';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[];
@@ -97,6 +99,9 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
     setVariableCosts(10);
     setPackagingCost(0);
     setProfitMargin(100);
+    setSelectedIngredientId('');
+    setDisplayQuantity('');
+    setDisplayUnit('original');
   }
 
   const handleSaveRecipe = () => {
@@ -109,7 +114,7 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
       return;
     }
 
-    const recipeData: Omit<Recipe, 'id' | 'createdAt'> = {
+    const recipeData = {
       name: recipeName,
       items,
       variableCostsPercentage: variableCosts,
@@ -120,14 +125,14 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
     };
 
     if (recipeId) { // Editing existing recipe
-      const updatedRecipe = { ...recipeData, id: recipeId, createdAt: recipes.find(r => r.id === recipeId)?.createdAt || new Date().toLocaleDateString('pt-BR') };
+      const updatedRecipe = { ...recipeData, id: recipeId, createdAt: recipes.find(r => r.id === recipeId)?.createdAt || new Date().toISOString() };
       setRecipes(prev => prev.map(r => r.id === recipeId ? updatedRecipe : r));
       toast({ title: 'Sucesso!', description: 'Receita atualizada.' });
     } else { // Creating new recipe
       const newRecipe: Recipe = {
         ...recipeData,
         id: Date.now().toString(),
-        createdAt: new Date().toLocaleDateString('pt-BR'),
+        createdAt: new Date().toISOString(),
       };
       setRecipes(prev => [newRecipe, ...prev]);
       toast({ title: 'Sucesso!', description: 'Receita salva.' });
@@ -158,58 +163,69 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
           </div>
           
           <div className="bg-muted/50 p-4 rounded-lg border">
-            <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-              <Select onValueChange={setSelectedIngredientId} value={selectedIngredientId}>
-                <SelectTrigger><SelectValue placeholder="Ingrediente..." /></SelectTrigger>
-                <SelectContent>
-                  {ingredients.map(ing => (
-                    <SelectItem key={ing.id} value={ing.id}>{ing.name} ({ing.packageUnit})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className='space-y-1'>
+                <label className="text-xs font-medium text-muted-foreground">Ingrediente</label>
+                <Select onValueChange={setSelectedIngredientId} value={selectedIngredientId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {ingredients.map(ing => (
+                      <SelectItem key={ing.id} value={ing.id}>{ing.name} ({ing.packageUnit})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
-              <Input type="number" step="0.01" placeholder="Qtd" value={displayQuantity} onChange={e => setDisplayQuantity(e.target.value)} />
-              
-              <Select onValueChange={(v: 'original' | 'xicara' | 'colher-sopa' | 'colher-cha') => setDisplayUnit(v)} value={displayUnit}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(UNIT_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className='space-y-1'>
+                 <label className="text-xs font-medium text-muted-foreground">Quantidade</label>
+                <Input type="number" step="0.01" placeholder="Qtd" value={displayQuantity} onChange={e => setDisplayQuantity(e.target.value)} />
+              </div>
+
+              <div className='space-y-1'>
+                <label className="text-xs font-medium text-muted-foreground">Medida</label>
+                <Select onValueChange={(v: 'original' | 'xicara' | 'colher-sopa' | 'colher-cha') => setDisplayUnit(v)} value={displayUnit}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(UNIT_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <Button type="submit" className="w-full"><Plus className="mr-2 h-4 w-4" /> Add</Button>
             </form>
           </div>
           
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead className="text-center">Qtd</TableHead>
-                <TableHead className="text-right">Custo</TableHead>
-                <TableHead className="text-center">Ação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Adicione ingredientes à sua receita.</TableCell></TableRow>}
-              {items.map(item => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.ingredient.name}</TableCell>
-                  <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
-                  <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
-                  <TableCell className="text-center">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+          <div className="max-h-60 overflow-y-auto pr-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-center">Qtd</TableHead>
+                  <TableHead className="text-right">Custo</TableHead>
+                  <TableHead className="w-12 text-center">Ação</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">Adicione ingredientes à sua receita.</TableCell></TableRow>}
+                {items.map(item => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.ingredient.name}</TableCell>
+                    <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-6">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
               <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
