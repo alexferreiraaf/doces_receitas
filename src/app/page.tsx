@@ -2,19 +2,23 @@
 'use client';
 
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Ingredient, Recipe } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from '@/components/app-header';
 import { CreateRecipeTab } from '@/components/create-recipe-tab';
 import { SavedRecipesTab } from '@/components/saved-recipes-tab';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+
+  const [activeTab, setActiveTab] = useState('create');
+  const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
+  const [ingredientToEdit, setIngredientToEdit] = useState<Ingredient | null>(null);
 
   const ingredientsQuery = useMemoFirebase(() => 
     user ? collection(firestore, 'users', user.uid, 'ingredients') : null, 
@@ -28,15 +32,28 @@ export default function Home() {
   const { data: ingredients = [], isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
   const { data: recipes = [], isLoading: recipesLoading } = useCollection<Recipe>(recipesQuery);
 
-  const [activeTab, setActiveTab] = useState('create');
-  const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
-
-  const handleAddIngredient = (ingredient: Omit<Ingredient, 'id'>) => {
+  const handleSaveIngredient = (ingredientData: Omit<Ingredient, 'id'>) => {
     if (!user) return;
-    const id = doc(collection(firestore, 'users', user.uid, 'ingredients')).id;
-    const newIngredient = { ...ingredient, id };
-    const ingredientRef = doc(firestore, 'users', user.uid, 'ingredients', id);
-    setDocumentNonBlocking(ingredientRef, newIngredient, { merge: true });
+  
+    if (ingredientToEdit) { // Editing existing ingredient
+      const updatedIngredient = { ...ingredientData, id: ingredientToEdit.id };
+      const ingredientRef = doc(firestore, 'users', user.uid, 'ingredients', ingredientToEdit.id);
+      setDocumentNonBlocking(ingredientRef, updatedIngredient, { merge: true });
+      setIngredientToEdit(null); // Reset editing state
+    } else { // Creating new ingredient
+      const id = doc(collection(firestore, 'users', user.uid, 'ingredients')).id;
+      const newIngredient = { ...ingredientData, id };
+      const ingredientRef = doc(firestore, 'users', user.uid, 'ingredients', id);
+      setDocumentNonBlocking(ingredientRef, newIngredient, { merge: true });
+    }
+  };
+
+  const handleEditIngredient = (ingredient: Ingredient) => {
+    setIngredientToEdit(ingredient);
+  };
+  
+  const handleClearIngredientEdit = () => {
+    setIngredientToEdit(null);
   };
 
   const handleDeleteIngredient = (id: string) => {
@@ -112,12 +129,15 @@ export default function Home() {
         <TabsContent value="create">
           <CreateRecipeTab
             ingredients={ingredients}
-            onAddIngredient={handleAddIngredient}
+            onSaveIngredient={handleSaveIngredient}
             onDeleteIngredient={handleDeleteIngredient}
             onSaveRecipe={handleSaveRecipe}
             recipeToEdit={recipeToEdit}
             onRecipeSaved={handleRecipeSaved}
             onClearEdit={handleClearEdit}
+            ingredientToEdit={ingredientToEdit}
+            onEditIngredient={handleEditIngredient}
+            onClearIngredientEdit={handleClearIngredientEdit}
           />
         </TabsContent>
         <TabsContent value="saved">

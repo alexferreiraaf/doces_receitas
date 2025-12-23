@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,37 +9,68 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Ingredient } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Save, XCircle } from 'lucide-react';
 
 interface IngredientFormProps {
-  onAddIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
+  onSaveIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
+  ingredientToEdit: Ingredient | null;
+  onClearIngredientEdit: () => void;
 }
 
-export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
+export function IngredientForm({ onSaveIngredient, ingredientToEdit, onClearIngredientEdit }: IngredientFormProps) {
   const [name, setName] = useState('');
   const [packageQuantity, setPackageQuantity] = useState('');
   const [packageUnit, setPackageUnit] = useState<'g' | 'ml' | 'un'>('g');
   const [price, setPrice] = useState('');
   const { toast } = useToast();
 
+  const isEditing = !!ingredientToEdit;
+
+  useEffect(() => {
+    if (ingredientToEdit) {
+      setName(ingredientToEdit.name);
+      setPackageQuantity(String(ingredientToEdit.packageQuantity));
+      setPackageUnit(ingredientToEdit.packageUnit);
+      setPrice(formatToCurrency(ingredientToEdit.price));
+    } else {
+      resetForm();
+    }
+  }, [ingredientToEdit]);
+
+  const formatToCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+  
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
     if (value === '') {
       setPrice('');
       return;
     }
-    value = (parseInt(value, 10) / 100).toFixed(2);
-    const formattedValue = new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(parseFloat(value));
-    setPrice(formattedValue);
+    const numberValue = parseInt(value, 10) / 100;
+    setPrice(formatToCurrency(numberValue));
+  };
+  
+  const parseCurrency = (value: string) => {
+    return parseFloat(value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+  }
+
+  const resetForm = () => {
+    setName('');
+    setPackageQuantity('');
+    setPackageUnit('g');
+    setPrice('');
+    onClearIngredientEdit();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const quantityNum = parseFloat(packageQuantity);
-    const priceNum = parseFloat(price.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+    const priceNum = parseCurrency(price);
 
     if (!name.trim()) {
       toast({ title: "Erro", description: "O nome do produto é obrigatório.", variant: "destructive" });
@@ -54,24 +85,23 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
       return;
     }
 
-    onAddIngredient({
+    onSaveIngredient({
       name,
       packageQuantity: quantityNum,
       packageUnit,
       price: priceNum,
     });
-
-    // Reset form
-    setName('');
-    setPackageQuantity('');
-    setPackageUnit('g');
-    setPrice('');
+    
+    toast({ title: 'Sucesso!', description: `Ingrediente "${name}" ${isEditing ? 'atualizado' : 'salvo'}.`});
+    resetForm();
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-xl">1. Cadastrar Ingrediente</CardTitle>
+        <CardTitle className="font-headline text-xl">
+          {isEditing ? 'Editar Ingrediente' : '1. Cadastrar Ingrediente'}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -123,7 +153,16 @@ export function IngredientForm({ onAddIngredient }: IngredientFormProps) {
             />
           </div>
 
-          <Button type="submit" className="w-full">Salvar Ingrediente</Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            {isEditing && (
+              <Button type="button" variant="outline" onClick={resetForm} className="w-full">
+                <XCircle /> Cancelar
+              </Button>
+            )}
+            <Button type="submit" className="w-full">
+              <Save/> {isEditing ? 'Atualizar Ingrediente' : 'Salvar Ingrediente'}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

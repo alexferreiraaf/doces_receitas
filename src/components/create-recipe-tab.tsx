@@ -9,29 +9,43 @@ import { RecipeBuilder } from './recipe-builder';
 
 interface CreateRecipeTabProps {
   ingredients: Ingredient[] | null;
-  onAddIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
+  onSaveIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
   onDeleteIngredient: (id: string) => void;
   onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
   onClearEdit: () => void;
+  ingredientToEdit: Ingredient | null;
+  onEditIngredient: (ingredient: Ingredient) => void;
+  onClearIngredientEdit: () => void;
 }
 
 export function CreateRecipeTab({ 
   ingredients, 
-  onAddIngredient, 
+  onSaveIngredient, 
   onDeleteIngredient,
   onSaveRecipe,
   recipeToEdit, 
   onRecipeSaved, 
-  onClearEdit 
+  onClearEdit,
+  ingredientToEdit,
+  onEditIngredient,
+  onClearIngredientEdit,
 }: CreateRecipeTabProps) {
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-1 space-y-8">
-        <IngredientForm onAddIngredient={onAddIngredient} />
-        <IngredientList ingredients={ingredients} onDeleteIngredient={onDeleteIngredient} />
+        <IngredientForm 
+          onSaveIngredient={onSaveIngredient}
+          ingredientToEdit={ingredientToEdit}
+          onClearIngredientEdit={onClearIngredientEdit}
+        />
+        <IngredientList 
+          ingredients={ingredients} 
+          onDeleteIngredient={onDeleteIngredient}
+          onEditIngredient={onEditIngredient}
+        />
       </div>
       <div className="lg:col-span-2">
         <RecipeBuilder 
