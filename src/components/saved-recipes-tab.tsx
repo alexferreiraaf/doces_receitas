@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,20 +9,26 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { formatCurrency } from '@/lib/utils';
 import type { Recipe } from '@/lib/types';
 import { RecipeDetailModal } from './recipe-detail-modal';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface SavedRecipesTabProps {
   recipes: Recipe[];
   setRecipes: Dispatch<SetStateAction<Recipe[]>>;
+  onEditRecipe: (recipe: Recipe) => void;
 }
 
-export function SavedRecipesTab({ recipes, setRecipes }: SavedRecipesTabProps) {
+export function SavedRecipesTab({ recipes, setRecipes, onEditRecipe }: SavedRecipesTabProps) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   const handleDeleteRecipe = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setRecipes(prev => prev.filter(r => r.id !== id));
   };
+  
+  const handleEditClick = (e: React.MouseEvent, recipe: Recipe) => {
+    e.stopPropagation();
+    onEditRecipe(recipe);
+  }
 
   return (
     <>
@@ -36,46 +43,54 @@ export function SavedRecipesTab({ recipes, setRecipes }: SavedRecipesTabProps) {
             <Card 
               key={recipe.id}
               className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group"
-              onClick={() => setSelectedRecipe(recipe)}
             >
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="font-headline text-lg">{recipe.name}</CardTitle>
-                  <span className="text-xs text-muted-foreground">{recipe.createdAt}</span>
-                </div>
-                <p className="text-sm text-muted-foreground pt-1">{recipe.items.length} ingredientes</p>
-              </CardHeader>
-              <CardContent className="space-y-4 flex-grow flex flex-col justify-end">
-                <div className="flex justify-between items-center border-t pt-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Custo</p>
-                    <p className="font-bold text-primary">{formatCurrency(recipe.totalCost)}</p>
+              <div onClick={() => setSelectedRecipe(recipe)} className="flex-grow">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="font-headline text-lg">{recipe.name}</CardTitle>
+                    <span className="text-xs text-muted-foreground">{recipe.createdAt}</span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground uppercase">Sugestão Venda</p>
-                    <p className="font-bold text-green-600">{formatCurrency(recipe.salePrice)}</p>
+                  <p className="text-sm text-muted-foreground pt-1">{recipe.items.length} ingredientes</p>
+                </CardHeader>
+                <CardContent className="space-y-4 flex-grow flex flex-col justify-end">
+                  <div className="flex justify-between items-center border-t pt-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase">Custo</p>
+                      <p className="font-bold text-primary">{formatCurrency(recipe.totalCost)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground uppercase">Sugestão Venda</p>
+                      <p className="font-bold text-green-600">{formatCurrency(recipe.salePrice)}</p>
+                    </div>
                   </div>
-                </div>
-                 <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                     <Button variant="outline" size="sm" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                      <Trash2 className="h-3 w-3 mr-2"/> Excluir
+                </CardContent>
+              </div>
+               <CardContent className="pt-0">
+                 <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="outline" size="sm" className="w-full" onClick={(e) => handleEditClick(e, recipe)}>
+                      <Pencil className="h-3 w-3 mr-2"/> Editar
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Essa ação não pode ser desfeita. A receita "{recipe.name}" será excluída permanentemente.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={(e) => handleDeleteRecipe(e, recipe.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardContent>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                         <Button variant="outline" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50" onClick={(e) => e.stopPropagation()}>
+                          <Trash2 className="h-4 w-4"/>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Essa ação não pode ser desfeita. A receita "{recipe.name}" será excluída permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={(e) => handleDeleteRecipe(e, recipe.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                 </div>
+               </CardContent>
             </Card>
           ))}
         </div>

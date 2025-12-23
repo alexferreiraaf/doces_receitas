@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -12,9 +13,11 @@ interface CreateRecipeTabProps {
   setIngredients: Dispatch<SetStateAction<Ingredient[]>>;
   recipes: Recipe[];
   setRecipes: Dispatch<SetStateAction<Recipe[]>>;
+  recipeToEdit: Recipe | null;
+  onRecipeSaved: () => void;
 }
 
-export function CreateRecipeTab({ ingredients, setIngredients, recipes, setRecipes }: CreateRecipeTabProps) {
+export function CreateRecipeTab({ ingredients, setIngredients, recipes, setRecipes, recipeToEdit, onRecipeSaved }: CreateRecipeTabProps) {
   
   const handleAddIngredient = (ingredient: Omit<Ingredient, 'id'>) => {
     const newIngredient = { ...ingredient, id: Date.now().toString() };
@@ -36,6 +39,8 @@ export function CreateRecipeTab({ ingredients, setIngredients, recipes, setRecip
           ingredients={ingredients}
           recipes={recipes}
           setRecipes={setRecipes}
+          recipeToEdit={recipeToEdit}
+          onRecipeSaved={onRecipeSaved}
         />
       </div>
     </div>

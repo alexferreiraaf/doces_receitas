@@ -1,3 +1,4 @@
+
 export type Ingredient = {
   id: string;
   name: string;
@@ -26,11 +27,3 @@ export type Recipe = {
   totalCost: number;
   salePrice: number;
 };
-
-export type SuggestedRecipe = {
-  recipeName: string;
-  ingredients: {
-    name: string;
-    quantity: string;
-  }[];
-}

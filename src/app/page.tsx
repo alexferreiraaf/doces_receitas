@@ -13,10 +13,23 @@ export default function Home() {
   const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>('docelucro_insumos', []);
   const [recipes, setRecipes] = useLocalStorage<Recipe[]>('docelucro_receitas', []);
 
+  const [activeTab, setActiveTab] = useState('create');
+  const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
+
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const handleEditRecipe = (recipe: Recipe) => {
+    setRecipeToEdit(recipe);
+    setActiveTab('create');
+  };
+
+  const handleRecipeSaved = () => {
+    setRecipeToEdit(null); // Clear recipe to edit after saving
+    setActiveTab('saved');
+  }
 
   if (!isClient) {
     return null; // Render nothing on the server to avoid hydration mismatch
@@ -26,7 +39,7 @@ export default function Home() {
     <div className="max-w-7xl mx-auto p-4 md:p-8">
       <AppHeader />
 
-      <Tabs defaultValue="create" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto mb-8">
           <TabsTrigger value="create">Criar Receita</TabsTrigger>
           <TabsTrigger value="saved">Minhas Receitas</TabsTrigger>
@@ -38,12 +51,15 @@ export default function Home() {
             setIngredients={setIngredients}
             recipes={recipes}
             setRecipes={setRecipes}
+            recipeToEdit={recipeToEdit}
+            onRecipeSaved={handleRecipeSaved}
           />
         </TabsContent>
         <TabsContent value="saved">
           <SavedRecipesTab
             recipes={recipes}
             setRecipes={setRecipes}
+            onEditRecipe={handleEditRecipe}
           />
         </TabsContent>
       </Tabs>

@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,12 @@ interface RecipeBuilderProps {
   ingredients: Ingredient[];
   recipes: Recipe[];
   setRecipes: Dispatch<SetStateAction<Recipe[]>>;
+  recipeToEdit: Recipe | null;
+  onRecipeSaved: () => void;
 }
 
-export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilderProps) {
+export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, onRecipeSaved }: RecipeBuilderProps) {
+  const [recipeId, setRecipeId] = useState<string | null>(null);
   const [recipeName, setRecipeName] = useState('');
   const [items, setItems] = useState<RecipeItem[]>([]);
   const [variableCosts, setVariableCosts] = useState(10);
@@ -30,6 +34,20 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
   const [displayQuantity, setDisplayQuantity] = useState('');
   const [displayUnit, setDisplayUnit] = useState<'original' | 'xicara' | 'colher-sopa' | 'colher-cha'>('original');
+
+  useEffect(() => {
+    if (recipeToEdit) {
+      setRecipeId(recipeToEdit.id);
+      setRecipeName(recipeToEdit.name);
+      setItems(recipeToEdit.items);
+      setVariableCosts(recipeToEdit.variableCostsPercentage);
+      setPackagingCost(recipeToEdit.packagingCost);
+      setProfitMargin(recipeToEdit.profitMargin);
+    } else {
+      resetForm();
+    }
+  }, [recipeToEdit]);
+
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +90,15 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
     return { ingredientsCost, totalCost, salePrice };
   }, [items, variableCosts, packagingCost, profitMargin]);
 
+  const resetForm = () => {
+    setRecipeId(null);
+    setRecipeName('');
+    setItems([]);
+    setVariableCosts(10);
+    setPackagingCost(0);
+    setProfitMargin(100);
+  }
+
   const handleSaveRecipe = () => {
     if (!recipeName) {
       toast({ title: 'Erro', description: 'Dê um nome para a sua receita.', variant: 'destructive' });
@@ -82,10 +109,8 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
       return;
     }
 
-    const newRecipe: Recipe = {
-      id: Date.now().toString(),
+    const recipeData: Omit<Recipe, 'id' | 'createdAt'> = {
       name: recipeName,
-      createdAt: new Date().toLocaleDateString('pt-BR'),
       items,
       variableCostsPercentage: variableCosts,
       packagingCost,
@@ -93,16 +118,23 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
       totalCost: calculations.totalCost,
       salePrice: calculations.salePrice,
     };
-    
-    setRecipes(prev => [newRecipe, ...prev]);
-    toast({ title: 'Sucesso!', description: 'Receita salva.' });
 
-    // Reset form
-    setRecipeName('');
-    setItems([]);
-    setVariableCosts(10);
-    setPackagingCost(0);
-    setProfitMargin(100);
+    if (recipeId) { // Editing existing recipe
+      const updatedRecipe = { ...recipeData, id: recipeId, createdAt: recipes.find(r => r.id === recipeId)?.createdAt || new Date().toLocaleDateString('pt-BR') };
+      setRecipes(prev => prev.map(r => r.id === recipeId ? updatedRecipe : r));
+      toast({ title: 'Sucesso!', description: 'Receita atualizada.' });
+    } else { // Creating new recipe
+      const newRecipe: Recipe = {
+        ...recipeData,
+        id: Date.now().toString(),
+        createdAt: new Date().toLocaleDateString('pt-BR'),
+      };
+      setRecipes(prev => [newRecipe, ...prev]);
+      toast({ title: 'Sucesso!', description: 'Receita salva.' });
+    }
+    
+    resetForm();
+    onRecipeSaved();
   };
   
   return (
@@ -111,7 +143,7 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes }: RecipeBuilde
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="font-headline text-xl">2. Montar Receita</CardTitle>
-            <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> Salvar Receita</Button>
+            <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {recipeId ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
