@@ -2,7 +2,6 @@
 'use client';
 
 import React from 'react';
-import type { Dispatch, SetStateAction } from 'react';
 import type { Ingredient, Recipe } from '@/lib/types';
 import { IngredientForm } from './ingredient-form';
 import { IngredientList } from './ingredient-list';
@@ -10,36 +9,34 @@ import { RecipeBuilder } from './recipe-builder';
 
 interface CreateRecipeTabProps {
   ingredients: Ingredient[];
-  setIngredients: Dispatch<SetStateAction<Ingredient[]>>;
-  recipes: Recipe[];
-  setRecipes: Dispatch<SetStateAction<Recipe[]>>;
+  onAddIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
+  onDeleteIngredient: (id: string) => void;
+  onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
   onClearEdit: () => void;
 }
 
-export function CreateRecipeTab({ ingredients, setIngredients, recipes, setRecipes, recipeToEdit, onRecipeSaved, onClearEdit }: CreateRecipeTabProps) {
+export function CreateRecipeTab({ 
+  ingredients, 
+  onAddIngredient, 
+  onDeleteIngredient,
+  onSaveRecipe,
+  recipeToEdit, 
+  onRecipeSaved, 
+  onClearEdit 
+}: CreateRecipeTabProps) {
   
-  const handleAddIngredient = (ingredient: Omit<Ingredient, 'id'>) => {
-    const newIngredient = { ...ingredient, id: Date.now().toString() };
-    setIngredients(prev => [...prev, newIngredient]);
-  };
-
-  const handleDeleteIngredient = (id: string) => {
-    setIngredients(prev => prev.filter(ing => ing.id !== id));
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-1 space-y-8">
-        <IngredientForm onAddIngredient={handleAddIngredient} />
-        <IngredientList ingredients={ingredients} onDeleteIngredient={handleDeleteIngredient} />
+        <IngredientForm onAddIngredient={onAddIngredient} />
+        <IngredientList ingredients={ingredients} onDeleteIngredient={onDeleteIngredient} />
       </div>
       <div className="lg:col-span-2">
         <RecipeBuilder 
           ingredients={ingredients}
-          recipes={recipes}
-          setRecipes={setRecipes}
+          onSaveRecipe={onSaveRecipe}
           recipeToEdit={recipeToEdit}
           onRecipeSaved={onRecipeSaved}
           onClearEdit={onClearEdit}

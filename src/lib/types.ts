@@ -9,7 +9,8 @@ export type Ingredient = {
 
 export type RecipeItem = {
   id: string;
-  ingredient: Ingredient;
+  ingredientId: string;
+  ingredientName: string;
   displayQuantity: number;
   displayUnit: 'original' | 'xicara' | 'colher-sopa' | 'colher-cha';
   baseQuantity: number;

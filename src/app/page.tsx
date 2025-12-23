@@ -1,26 +1,79 @@
 
 'use client';
 
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import type { Ingredient, Recipe } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from '@/components/app-header';
 import { CreateRecipeTab } from '@/components/create-recipe-tab';
 import { SavedRecipesTab } from '@/components/saved-recipes-tab';
 import { useEffect, useState } from 'react';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 export default function Home() {
-  const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>('docelucro_insumos', []);
-  const [recipes, setRecipes] = useLocalStorage<Recipe[]>('docelucro_receitas', []);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const ingredientsQuery = useMemoFirebase(() => 
+    user ? collection(firestore, 'users', user.uid, 'ingredients') : null, 
+    [user, firestore]
+  );
+  const recipesQuery = useMemoFirebase(() => 
+    user ? collection(firestore, 'users', user.uid, 'recipes') : null,
+    [user, firestore]
+  );
+
+  const { data: ingredients = [], isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
+  const { data: recipes = [], isLoading: recipesLoading } = useCollection<Recipe>(recipesQuery);
 
   const [activeTab, setActiveTab] = useState('create');
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
 
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const handleAddIngredient = (ingredient: Omit<Ingredient, 'id'>) => {
+    if (!user) return;
+    const id = doc(collection(firestore, 'users', user.uid, 'ingredients')).id;
+    const newIngredient = { ...ingredient, id };
+    const ingredientRef = doc(firestore, 'users', user.uid, 'ingredients', id);
+    setDocumentNonBlocking(ingredientRef, newIngredient, { merge: true });
+  };
+
+  const handleDeleteIngredient = (id: string) => {
+    if (!user) return;
+    const ingredientRef = doc(firestore, 'users', user.uid, 'ingredients', id);
+    deleteDocumentNonBlocking(ingredientRef);
+  };
   
+  const handleSaveRecipe = (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => {
+    if (!user) return;
+
+    if (recipeToEdit) { // Editing
+      const updatedRecipe = { 
+        ...recipeData, 
+        id: recipeToEdit.id, 
+        createdAt: recipeToEdit.createdAt 
+      };
+      const recipeRef = doc(firestore, 'users', user.uid, 'recipes', recipeToEdit.id);
+      setDocumentNonBlocking(recipeRef, updatedRecipe, { merge: true });
+    } else { // Creating
+      const id = doc(collection(firestore, 'users', user.uid, 'recipes')).id;
+      const newRecipe = { 
+        ...recipeData, 
+        id, 
+        createdAt: new Date().toISOString() 
+      };
+      const recipeRef = doc(firestore, 'users', user.uid, 'recipes', id);
+      setDocumentNonBlocking(recipeRef, newRecipe, { merge: true });
+    }
+  };
+
+  const handleDeleteRecipe = (id: string) => {
+    if(!user) return;
+    const recipeRef = doc(firestore, 'users', user.uid, 'recipes', id);
+    deleteDocumentNonBlocking(recipeRef);
+  };
+
   const handleEditRecipe = (recipe: Recipe) => {
     setRecipeToEdit(recipe);
     setActiveTab('create');
@@ -35,8 +88,15 @@ export default function Home() {
     setRecipeToEdit(null);
   }
 
-  if (!isClient) {
-    return null; // Render nothing on the server to avoid hydration mismatch
+  if (isUserLoading || ingredientsLoading || recipesLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-primary">Carregando...</p>
+          <p className="text-sm text-muted-foreground">Aguarde enquanto preparamos tudo para você.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -52,9 +112,9 @@ export default function Home() {
         <TabsContent value="create">
           <CreateRecipeTab
             ingredients={ingredients}
-            setIngredients={setIngredients}
-            recipes={recipes}
-            setRecipes={setRecipes}
+            onAddIngredient={handleAddIngredient}
+            onDeleteIngredient={handleDeleteIngredient}
+            onSaveRecipe={handleSaveRecipe}
             recipeToEdit={recipeToEdit}
             onRecipeSaved={handleRecipeSaved}
             onClearEdit={handleClearEdit}
@@ -63,7 +123,7 @@ export default function Home() {
         <TabsContent value="saved">
           <SavedRecipesTab
             recipes={recipes}
-            setRecipes={setRecipes}
+            onDeleteRecipe={handleDeleteRecipe}
             onEditRecipe={handleEditRecipe}
           />
         </TabsContent>

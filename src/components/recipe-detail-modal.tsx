@@ -27,8 +27,7 @@ export function RecipeDetailModal({ recipe, isOpen, setIsOpen }: RecipeDetailMod
     try {
       return format(parseISO(dateString), "'Salva em' dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
     } catch (e) {
-      // Fallback for old date format if any
-      return `Salva em ${dateString}`;
+      return `Salva em data inválida`;
     }
   }
   
@@ -37,7 +36,7 @@ export function RecipeDetailModal({ recipe, isOpen, setIsOpen }: RecipeDetailMod
 Receita: ${recipe.name}
 
 Ingredientes:
-${recipe.items.map(i => `- ${i.ingredient.name}: ${i.displayQuantity} ${UNIT_LABELS[i.displayUnit].split(' ')[0]}`).join('\n')}
+${recipe.items.map(i => `- ${i.ingredientName}: ${i.displayQuantity} ${UNIT_LABELS[i.displayUnit].split(' ')[0]}`).join('\n')}
 
 Custo Total: ${formatCurrency(recipe.totalCost)}
 Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
@@ -71,7 +70,7 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
                 <TableBody>
                   {recipe.items.map(item => (
                     <TableRow key={item.id}>
-                      <TableCell className="whitespace-nowrap">{item.ingredient.name}</TableCell>
+                      <TableCell className="whitespace-nowrap">{item.ingredientName}</TableCell>
                       <TableCell className="text-muted-foreground whitespace-nowrap">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
                       <TableCell className="text-right font-semibold whitespace-nowrap">{formatCurrency(item.cost)}</TableCell>
                     </TableRow>

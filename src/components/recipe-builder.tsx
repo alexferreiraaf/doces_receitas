@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
 import { Plus, Save, Trash2, XCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,15 +14,19 @@ import { useToast } from '@/hooks/use-toast';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[];
-  recipes: Recipe[];
-  setRecipes: Dispatch<SetStateAction<Recipe[]>>;
+  onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
   onClearEdit: () => void;
 }
 
-export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, onRecipeSaved, onClearEdit }: RecipeBuilderProps) {
-  const [recipeId, setRecipeId] = useState<string | null>(null);
+export function RecipeBuilder({ 
+  ingredients, 
+  onSaveRecipe, 
+  recipeToEdit, 
+  onRecipeSaved, 
+  onClearEdit 
+}: RecipeBuilderProps) {
   const [recipeName, setRecipeName] = useState('');
   const [items, setItems] = useState<RecipeItem[]>([]);
   const [variableCosts, setVariableCosts] = useState(10);
@@ -31,7 +34,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
   const [profitMargin, setProfitMargin] = useState(100);
   const { toast } = useToast();
 
-  // State for the item form
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
   const [displayQuantity, setDisplayQuantity] = useState('');
   const [displayUnit, setDisplayUnit] = useState<'original' | 'xicara' | 'colher-sopa' | 'colher-cha'>('original');
@@ -40,7 +42,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
 
   useEffect(() => {
     if (recipeToEdit) {
-      setRecipeId(recipeToEdit.id);
       setRecipeName(recipeToEdit.name);
       setItems(recipeToEdit.items);
       setVariableCosts(recipeToEdit.variableCostsPercentage);
@@ -50,7 +51,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
       resetForm();
     }
   }, [recipeToEdit]);
-
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,12 +62,19 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
       return;
     }
     
+    // Check if ingredient has a valid price and quantity
+    if (typeof ingredient.price !== 'number' || typeof ingredient.packageQuantity !== 'number' || ingredient.packageQuantity === 0) {
+      toast({ title: 'Erro de Ingrediente', description: `O ingrediente "${ingredient.name}" tem dados inválidos. Verifique seu preço e quantidade.`, variant: 'destructive'});
+      return;
+    }
+
     const baseQuantity = quantity * CONVERSION_RATES[displayUnit];
     const cost = (ingredient.price / ingredient.packageQuantity) * baseQuantity;
 
     const newItem: RecipeItem = {
       id: Date.now().toString(),
-      ingredient,
+      ingredientId: ingredient.id,
+      ingredientName: ingredient.name,
       displayQuantity: quantity,
       displayUnit: displayUnit,
       baseQuantity,
@@ -76,7 +83,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
 
     setItems(prev => [...prev, newItem]);
     
-    // Reset item form
     setSelectedIngredientId('');
     setDisplayQuantity('');
     setDisplayUnit('original');
@@ -94,7 +100,6 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
   }, [items, variableCosts, packagingCost, profitMargin]);
 
   const resetForm = () => {
-    setRecipeId(null);
     setRecipeName('');
     setItems([]);
     setVariableCosts(10);
@@ -130,19 +135,8 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
       salePrice: calculations.salePrice,
     };
 
-    if (recipeId) { // Editing existing recipe
-      const updatedRecipe = { ...recipeData, id: recipeId, createdAt: recipes.find(r => r.id === recipeId)?.createdAt || new Date().toISOString() };
-      setRecipes(prev => prev.map(r => r.id === recipeId ? updatedRecipe : r));
-      toast({ title: 'Sucesso!', description: 'Receita atualizada.' });
-    } else { // Creating new recipe
-      const newRecipe: Recipe = {
-        ...recipeData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-      };
-      setRecipes(prev => [newRecipe, ...prev]);
-      toast({ title: 'Sucesso!', description: 'Receita salva.' });
-    }
+    onSaveRecipe(recipeData);
+    toast({ title: 'Sucesso!', description: `Receita "${recipeName}" salva.` });
     
     resetForm();
     onRecipeSaved();
@@ -158,7 +152,7 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
             </CardTitle>
             <div className="flex gap-2">
               {isEditing && <Button onClick={handleCancelEdit} size="sm" variant="outline"><XCircle className="mr-2 h-4 w-4"/>Cancelar</Button>}
-              <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {recipeId ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
+              <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
             </div>
           </div>
         </CardHeader>
@@ -223,7 +217,7 @@ export function RecipeBuilder({ ingredients, recipes, setRecipes, recipeToEdit, 
                   {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">Adicione ingredientes à sua receita.</TableCell></TableRow>}
                   {items.map(item => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium whitespace-nowrap">{item.ingredient.name}</TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">{item.ingredientName}</TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
                       <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
                       <TableCell className="text-center">

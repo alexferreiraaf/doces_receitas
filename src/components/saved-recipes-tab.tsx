@@ -2,7 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -15,16 +14,16 @@ import { ptBR } from 'date-fns/locale';
 
 interface SavedRecipesTabProps {
   recipes: Recipe[];
-  setRecipes: Dispatch<SetStateAction<Recipe[]>>;
+  onDeleteRecipe: (id: string) => void;
   onEditRecipe: (recipe: Recipe) => void;
 }
 
-export function SavedRecipesTab({ recipes, setRecipes, onEditRecipe }: SavedRecipesTabProps) {
+export function SavedRecipesTab({ recipes, onDeleteRecipe, onEditRecipe }: SavedRecipesTabProps) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
-  const handleDeleteRecipe = (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setRecipes(prev => prev.filter(r => r.id !== id));
+    onDeleteRecipe(id);
   };
   
   const handleEditClick = (e: React.MouseEvent, recipe: Recipe) => {
@@ -36,8 +35,7 @@ export function SavedRecipesTab({ recipes, setRecipes, onEditRecipe }: SavedReci
     try {
       return format(parseISO(dateString), "dd/MM/yyyy");
     } catch (e) {
-      // Fallback for old date format if any
-      return dateString;
+      return "Data inválida";
     }
   }
 
@@ -97,7 +95,7 @@ export function SavedRecipesTab({ recipes, setRecipes, onEditRecipe }: SavedReci
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={(e) => handleDeleteRecipe(e, recipe.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                          <AlertDialogAction onClick={(e) => handleDeleteClick(e, recipe.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
