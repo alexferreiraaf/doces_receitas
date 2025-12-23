@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Trash2 } from 'lucide-react';
@@ -8,11 +9,13 @@ import { formatCurrency } from '@/lib/utils';
 import type { Ingredient } from '@/lib/types';
 
 interface IngredientListProps {
-  ingredients: Ingredient[];
+  ingredients: Ingredient[] | null;
   onDeleteIngredient: (id: string) => void;
 }
 
 export function IngredientList({ ingredients, onDeleteIngredient }: IngredientListProps) {
+  const safeIngredients = ingredients || [];
+
   return (
     <Card>
       <CardHeader>
@@ -20,11 +23,11 @@ export function IngredientList({ ingredients, onDeleteIngredient }: IngredientLi
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-64">
-          {ingredients.length === 0 ? (
+          {safeIngredients.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Nenhum insumo cadastrado.</p>
           ) : (
             <ul className="space-y-2">
-              {ingredients.map(ing => (
+              {safeIngredients.map(ing => (
                 <li key={ing.id} className="flex justify-between items-center bg-muted/50 p-2 rounded-md group">
                   <div>
                     <p className="font-semibold">{ing.name}</p>

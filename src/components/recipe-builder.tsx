@@ -13,7 +13,7 @@ import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface RecipeBuilderProps {
-  ingredients: Ingredient[];
+  ingredients: Ingredient[] | null;
   onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
@@ -39,6 +39,7 @@ export function RecipeBuilder({
   const [displayUnit, setDisplayUnit] = useState<'original' | 'xicara' | 'colher-sopa' | 'colher-cha'>('original');
 
   const isEditing = !!recipeToEdit;
+  const safeIngredients = ingredients || [];
 
   useEffect(() => {
     if (recipeToEdit) {
@@ -54,7 +55,7 @@ export function RecipeBuilder({
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
-    const ingredient = ingredients.find(i => i.id === selectedIngredientId);
+    const ingredient = safeIngredients.find(i => i.id === selectedIngredientId);
     const quantity = parseFloat(displayQuantity);
 
     if (!ingredient || !quantity || quantity <= 0) {
@@ -62,7 +63,6 @@ export function RecipeBuilder({
       return;
     }
     
-    // Check if ingredient has a valid price and quantity
     if (typeof ingredient.price !== 'number' || typeof ingredient.packageQuantity !== 'number' || ingredient.packageQuantity === 0) {
       toast({ title: 'Erro de Ingrediente', description: `O ingrediente "${ingredient.name}" tem dados inválidos. Verifique seu preço e quantidade.`, variant: 'destructive'});
       return;
@@ -174,7 +174,7 @@ export function RecipeBuilder({
                 <Select onValueChange={setSelectedIngredientId} value={selectedIngredientId}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
-                    {ingredients.map(ing => (
+                    {safeIngredients.map(ing => (
                       <SelectItem key={ing.id} value={ing.id}>{ing.name} ({ing.packageUnit})</SelectItem>
                     ))}
                   </SelectContent>

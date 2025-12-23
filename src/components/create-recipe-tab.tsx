@@ -8,7 +8,7 @@ import { IngredientList } from './ingredient-list';
 import { RecipeBuilder } from './recipe-builder';
 
 interface CreateRecipeTabProps {
-  ingredients: Ingredient[];
+  ingredients: Ingredient[] | null;
   onAddIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
   onDeleteIngredient: (id: string) => void;
   onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
