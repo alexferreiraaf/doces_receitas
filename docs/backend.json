@@ -14,12 +14,13 @@
           "type": "string",
           "description": "Name of the ingredient (e.g., Flour)."
         },
-        "quantityPackage": {
+        "packageQuantity": {
           "type": "number",
           "description": "Quantity of the ingredient in a package."
         },
-        "unit": {
+        "packageUnit": {
           "type": "string",
+          "enum": ["g", "ml", "un"],
           "description": "Unit of measure for the ingredient (e.g., g, ml, unit)."
         },
         "price": {
@@ -30,9 +31,53 @@
       "required": [
         "id",
         "name",
-        "quantityPackage",
-        "unit",
+        "packageQuantity",
+        "packageUnit",
         "price"
+      ]
+    },
+    "RecipeItem": {
+      "title": "Recipe Item",
+      "type": "object",
+      "description": "Represents a single ingredient within a recipe, capturing its quantity and cost at the time of recipe creation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the recipe item."
+        },
+        "ingredientId": {
+          "type": "string",
+          "description": "Reference to the original ingredient ID."
+        },
+        "ingredientName": {
+          "type": "string",
+          "description": "Name of the ingredient at the time of saving."
+        },
+        "displayQuantity": {
+          "type": "number",
+          "description": "The quantity used, as displayed in the UI."
+        },
+        "displayUnit": {
+          "type": "string",
+          "description": "The unit of measure used, as displayed in the UI (e.g., xicara)."
+        },
+        "baseQuantity": {
+          "type": "number",
+          "description": "The quantity converted to the ingredient's base unit (g, ml, un)."
+        },
+        "cost": {
+          "type": "number",
+          "description": "The calculated cost for this item in the recipe."
+        }
+      },
+      "required": [
+        "id",
+        "ingredientId",
+        "ingredientName",
+        "displayQuantity",
+        "displayUnit",
+        "baseQuantity",
+        "cost"
       ]
     },
     "Recipe": {
@@ -49,23 +94,22 @@
           "type": "string",
           "description": "Name of the recipe (e.g., Chocolate Cake)."
         },
-        "dateCreated": {
+        "createdAt": {
           "type": "string",
-          "description": "Date when the recipe was created.",
-          "format": "date-time"
+          "description": "Date when the recipe was created (ISO 8601 format)."
         },
-        "ingredientList": {
+        "items": {
           "type": "array",
-          "description": "List of ingredients used in the recipe.",
+          "description": "List of ingredient items that make up the recipe.",
           "items": {
-            "type": "string"
+            "$ref": "#/backend/entities/RecipeItem"
           }
         },
         "totalCost": {
           "type": "number",
           "description": "Total cost of producing the recipe."
         },
-        "suggestedPrice": {
+        "salePrice": {
           "type": "number",
           "description": "Suggested selling price for the recipe."
         },
@@ -85,10 +129,10 @@
       "required": [
         "id",
         "name",
-        "dateCreated",
-        "ingredientList",
+        "createdAt",
+        "items",
         "totalCost",
-        "suggestedPrice",
+        "salePrice",
         "variableCostsPercentage",
         "packagingCost",
         "profitMargin"
@@ -144,6 +188,6 @@
         }
       }
     ],
-    "reasoning": "Based on the provided information, the application \"Doce Estimativa\" manages ingredients and recipes, calculates costs and profit margins. The structure is designed to optimize for the following use cases: Ingredient Inventory, Recipe Creation, Cost Calculation, Profit Margin Calculation, Recipe Generation, and Recipe Sharing.\n\nThe data structure enforces Authorization Independence by storing all data related to a user's recipes and ingredients under their respective `userId`. This eliminates the need for complex `get()` calls in security rules to validate ownership. The segregation of data by user ID supports the QAP by ensuring that list operations only return data accessible to the requesting user.\n\n**Data Structure Justification:**\n\n1.  **Ingredients (per User):** Ingredients are stored under `/users/{userId}/ingredients/{ingredientId}`. This provides clear ownership and simplifies security rules. All ingredient data is private to the user who created it. \n\n2.  **Recipes (per User):** Recipes are stored under `/users/{userId}/recipes/{recipeId}`. Similar to ingredients, this provides explicit ownership and simplifies security rules. All recipe data is private to the user. Each recipe will contain the `ingredientList` which stores the IDs of ingredients used in the recipe. A read operation on a recipe will require that user to have access to all ingredients referenced in the `ingredientList` for accurate cost calculations. The `ingredientList` maintains the referential integrity of the data structure.\n\n**Authorization Independence & QAPs:**\n\n*   **Authorization Independence:** By nesting ingredients and recipes under the user ID, we ensure that all authorization checks are based on the path. There is no need to `get()` data from other documents to determine access, as the user ID in the path inherently grants ownership.\n*   **QAPs:** The path-based ownership model enables secure `list` operations. Security rules can easily restrict listing to only the resources owned by the authenticated user (`request.auth.uid == userId`).\n\n**Future Considerations:**\n*   For shared recipes, consider creating a separate `/shared_recipes/{sharedRecipeId}` collection. The document would include a list of `member` user IDs who have access to it."
+    "reasoning": "Based on the provided information, the application \"Doce Estimativa\" manages ingredients and recipes, calculates costs and profit margins. The structure is designed to optimize for the following use cases: Ingredient Inventory, Recipe Creation, Cost Calculation, Profit Margin Calculation, Recipe Generation, and Recipe Sharing.\n\nThe data structure enforces Authorization Independence by storing all data related to a user's recipes and ingredients under their respective `userId`. This eliminates the need for complex `get()` calls in security rules to validate ownership. The segregation of data by user ID supports the QAP by ensuring that list operations only return data accessible to the requesting user.\n\n**Data Structure Justification:**\n\n1.  **Ingredients (per User):** Ingredients are stored under `/users/{userId}/ingredients/{ingredientId}`. This provides clear ownership and simplifies security rules. All ingredient data is private to the user who created it. \n\n2.  **Recipes (per User):** Recipes are stored under `/users/{userId}/recipes/{recipeId}`. Similar to ingredients, this provides explicit ownership and simplifies security rules. All recipe data is private to the user. Each recipe will contain an `items` array which stores the full `RecipeItem` objects used in the recipe. This denormalization is intentional and critical: it captures the exact state (name, quantity, cost) of an ingredient at the moment the recipe was created. This ensures that historical recipes remain accurate even if the master ingredient's price or name changes later. \n\n**Authorization Independence & QAPs:**\n\n*   **Authorization Independence:** By nesting ingredients and recipes under the user ID, we ensure that all authorization checks are based on the path. There is no need to `get()` data from other documents to determine access, as the user ID in the path inherently grants ownership.\n*   **QAPs:** The path-based ownership model enables secure `list` operations. Security rules can easily restrict listing to only the resources owned by the authenticated user (`request.auth.uid == userId`).\n\n**Future Considerations:**\n*   For shared recipes, consider creating a separate `/shared_recipes/{sharedRecipeId}` collection. The document would include a list of `member` user IDs who have access to it."
   }
 }
