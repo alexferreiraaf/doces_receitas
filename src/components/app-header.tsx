@@ -1,12 +1,29 @@
-import { Cake } from 'lucide-react';
+'use client';
+
+import { Cake, LogOut } from 'lucide-react';
+import { useUser, signOutUser } from '@/firebase';
+import { Button } from './ui/button';
 
 export function AppHeader() {
+  const { user } = useUser();
+
   return (
-    <header className="mb-8 text-center">
-      <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary flex items-center justify-center gap-2 md:gap-3">
-        <Cake className="w-8 h-8 md:w-10 md:h-10" /> Doce Estimativa
-      </h1>
-      <p className="text-muted-foreground mt-2 text-sm md:text-base">Gestão Profissional de Custos e Receitas</p>
+    <header className="mb-8">
+      {user && (
+        <div className="flex justify-end items-center gap-2 mb-4">
+          <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
+          <Button variant="outline" size="sm" onClick={signOutUser}>
+            <LogOut className="h-4 w-4 sm:mr-2" />
+            <span className='hidden sm:inline'>Sair</span>
+          </Button>
+        </div>
+      )}
+      <div className='text-center'>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary flex items-center justify-center gap-2 md:gap-3">
+          <Cake className="w-8 h-8 md:w-10 md:h-10" /> Doce Estimativa
+        </h1>
+        <p className="text-muted-foreground mt-2 text-sm md:text-base">Gestão Profissional de Custos e Receitas</p>
+      </div>
     </header>
   );
 }

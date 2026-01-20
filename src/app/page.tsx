@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
@@ -11,6 +10,7 @@ import { CreateRecipeTab } from '@/components/create-recipe-tab';
 import { SavedRecipesTab } from '@/components/saved-recipes-tab';
 import { useState } from 'react';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { AuthForm } from '@/components/auth-form';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -83,6 +83,7 @@ export default function Home() {
       const recipeRef = doc(firestore, 'users', user.uid, 'recipes', id);
       setDocumentNonBlocking(recipeRef, newRecipe, { merge: true });
     }
+    setRecipeToEdit(null);
   };
 
   const handleDeleteRecipe = (id: string) => {
@@ -105,7 +106,8 @@ export default function Home() {
     setRecipeToEdit(null);
   }
 
-  if (isUserLoading || ingredientsLoading || recipesLoading) {
+  // Loading state for auth and initial data fetch
+  if (isUserLoading || (user && (ingredientsLoading || recipesLoading))) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -114,6 +116,11 @@ export default function Home() {
         </div>
       </div>
     );
+  }
+
+  // If no user, show AuthForm
+  if (!user) {
+    return <AuthForm />;
   }
 
   return (
