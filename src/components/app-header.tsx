@@ -3,6 +3,7 @@
 import { Cake, LogOut } from 'lucide-react';
 import { useUser, signOutUser } from '@/firebase';
 import { Button } from './ui/button';
+import { ThemeToggle } from './theme-toggle';
 
 export function AppHeader() {
   const { user } = useUser();
@@ -12,6 +13,7 @@ export function AppHeader() {
       {user && (
         <div className="flex justify-end items-center gap-2 mb-4">
           <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
+          <ThemeToggle />
           <Button variant="outline" size="sm" onClick={signOutUser}>
             <LogOut className="h-4 w-4 sm:mr-2" />
             <span className='hidden sm:inline'>Sair</span>
