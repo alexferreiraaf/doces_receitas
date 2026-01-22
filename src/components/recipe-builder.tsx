@@ -2,15 +2,16 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Save, Trash2, XCircle } from 'lucide-react';
+import { Plus, Save, Trash2, XCircle, Wand2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency } from '@/lib/utils';
-import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem, SuggestedRecipe } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { AISuggestionModal } from './ai-suggestion-modal';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[] | null;
@@ -32,6 +33,7 @@ export function RecipeBuilder({
   const [variableCosts, setVariableCosts] = useState(10);
   const [packagingCost, setPackagingCost] = useState('');
   const [profitMargin, setProfitMargin] = useState(100);
+  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const { toast } = useToast();
 
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
@@ -52,6 +54,77 @@ export function RecipeBuilder({
       resetForm();
     }
   }, [recipeToEdit]);
+
+  const handleUseSuggestion = (suggestion: SuggestedRecipe) => {
+    resetForm();
+    setRecipeName(suggestion.recipeName);
+
+    const mapUnit = (unit: string): RecipeItem['displayUnit'] => {
+      const lowerUnit = unit.toLowerCase();
+      if (lowerUnit.includes('xicara') || lowerUnit.includes('xícara')) return 'xicara';
+      if (lowerUnit.includes('sopa')) return 'colher-sopa';
+      if (lowerUnit.includes('chá') || lowerUnit.includes('cha')) return 'colher-cha';
+      return 'original';
+    };
+
+    const newItems: RecipeItem[] = suggestion.ingredients
+      .map(suggIng => {
+        const inventoryIng = safeIngredients.find(
+          i => i.name.toLowerCase() === suggIng.name.toLowerCase()
+        );
+
+        if (!inventoryIng) return null;
+
+        const displayUnit = mapUnit(suggIng.unit);
+        const displayQuantity = suggIng.quantity;
+        
+        let baseQuantity: number;
+        if (displayUnit !== 'original') {
+            baseQuantity = displayQuantity * (CONVERSION_RATES[displayUnit] || 1);
+        } else {
+            const lowerUnit = suggIng.unit.toLowerCase();
+            if (['g', 'ml', 'un'].includes(lowerUnit) && lowerUnit === inventoryIng.packageUnit) {
+                baseQuantity = displayQuantity;
+            } else {
+                baseQuantity = displayQuantity; // Fallback for 'unidades' etc.
+            }
+        }
+
+        const cost = (inventoryIng.price / inventoryIng.packageQuantity) * baseQuantity;
+
+        if (isNaN(cost) || !isFinite(cost)) return null;
+
+        return {
+          id: `${Date.now()}-${suggIng.name}`,
+          ingredientId: inventoryIng.id,
+          ingredientName: inventoryIng.name,
+          displayQuantity,
+          displayUnit,
+          baseQuantity,
+          cost,
+        };
+      })
+      .filter((item): item is RecipeItem => item !== null);
+
+    setItems(newItems);
+
+    const unmatched = suggestion.ingredients.filter(
+      suggIng => !safeIngredients.some(i => i.name.toLowerCase() === suggIng.name.toLowerCase())
+    );
+
+    if (unmatched.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Alguns ingredientes não foram encontrados',
+        description: `Os seguintes itens não estão no seu inventário: ${unmatched.map(i => i.name).join(', ')}.`,
+      });
+    }
+
+    toast({
+        title: 'Receita preenchida!',
+        description: `A receita para "${suggestion.recipeName}" foi carregada. Verifique os itens antes de salvar.`
+    })
+  };
 
   const handlePackagingCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -154,138 +227,148 @@ export function RecipeBuilder({
   };
   
   return (
-    <div className="space-y-8">
-      <Card className="border-t-4 border-primary">
-        <CardHeader>
-          <div className="flex flex-wrap gap-4 justify-between items-center">
-            <CardTitle className="font-headline text-xl">
-              {isEditing ? 'Editando Receita' : '2. Montar Receita'}
-            </CardTitle>
-            <div className="flex gap-2">
-              {isEditing && <Button onClick={handleCancelEdit} size="sm" variant="outline"><XCircle className="mr-2 h-4 w-4"/>Cancelar</Button>}
-              <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
+    <>
+      <AISuggestionModal
+        isOpen={isSuggestionModalOpen}
+        setIsOpen={setIsSuggestionModalOpen}
+        ingredients={safeIngredients}
+        onUseSuggestion={handleUseSuggestion}
+      />
+      <div className="space-y-8">
+        <Card className="border-t-4 border-primary">
+          <CardHeader>
+            <div className="flex flex-wrap gap-4 justify-between items-center">
+              <CardTitle className="font-headline text-xl">
+                {isEditing ? 'Editando Receita' : '2. Montar Receita'}
+              </CardTitle>
+              <div className="flex gap-2">
+                {isEditing && <Button onClick={handleCancelEdit} size="sm" variant="outline"><XCircle className="mr-2 h-4 w-4"/>Cancelar</Button>}
+                <Button variant="outline" size="sm" onClick={() => setIsSuggestionModalOpen(true)} className="hidden sm:flex">
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Usar IA
+                </Button>
+                <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Nome da Receita</label>
-            <Input 
-              value={recipeName}
-              onChange={(e) => setRecipeName(e.target.value)}
-              placeholder="Ex: Bolo Vulcão de Cenoura"
-              className="text-lg font-bold"
-            />
-          </div>
-          
-          <div className="bg-muted/50 p-4 rounded-lg border">
-            <form onSubmit={handleAddItem} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-              <div className='space-y-1 sm:col-span-2 lg:col-span-1'>
-                <label className="text-xs font-medium text-muted-foreground">Ingrediente</label>
-                <Select onValueChange={setSelectedIngredientId} value={selectedIngredientId}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {safeIngredients.map(ing => (
-                      <SelectItem key={ing.id} value={ing.id}>{ing.name} ({ing.packageUnit})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className='space-y-1'>
-                 <label className="text-xs font-medium text-muted-foreground">Quantidade</label>
-                <Input type="number" step="0.01" placeholder="Qtd" value={displayQuantity} onChange={e => setDisplayQuantity(e.target.value)} />
-              </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Nome da Receita</label>
+              <Input 
+                value={recipeName}
+                onChange={(e) => setRecipeName(e.target.value)}
+                placeholder="Ex: Bolo Vulcão de Cenoura"
+                className="text-lg font-bold"
+              />
+            </div>
+            
+            <div className="bg-muted/50 p-4 rounded-lg border">
+              <form onSubmit={handleAddItem} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div className='space-y-1 sm:col-span-2 lg:col-span-1'>
+                  <label className="text-xs font-medium text-muted-foreground">Ingrediente</label>
+                  <Select onValueChange={setSelectedIngredientId} value={selectedIngredientId}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {safeIngredients.map(ing => (
+                        <SelectItem key={ing.id} value={ing.id}>{ing.name} ({ing.packageUnit})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className='space-y-1'>
+                  <label className="text-xs font-medium text-muted-foreground">Quantidade</label>
+                  <Input type="number" step="0.01" placeholder="Qtd" value={displayQuantity} onChange={e => setDisplayQuantity(e.target.value)} />
+                </div>
 
-              <div className='space-y-1'>
-                <label className="text-xs font-medium text-muted-foreground">Medida</label>
-                <Select onValueChange={(v: 'original' | 'xicara' | 'colher-sopa' | 'colher-cha') => setDisplayUnit(v)} value={displayUnit}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(UNIT_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className='space-y-1'>
+                  <label className="text-xs font-medium text-muted-foreground">Medida</label>
+                  <Select onValueChange={(v: 'original' | 'xicara' | 'colher-sopa' | 'colher-cha') => setDisplayUnit(v)} value={displayUnit}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(UNIT_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <Button type="submit" className="w-full"><Plus className="mr-2 h-4 w-4" /> Add</Button>
-            </form>
-          </div>
-          
-          <div className="max-h-60 overflow-y-auto pr-2">
-            <div className="relative overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead className="text-right">Custo</TableHead>
-                    <TableHead className="w-12 text-center">Ação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">Adicione ingredientes à sua receita.</TableCell></TableRow>}
-                  {items.map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium whitespace-nowrap">{item.ingredientName}</TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
-                      <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
-                      <TableCell className="text-center">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                <Button type="submit" className="w-full"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+              </form>
+            </div>
+            
+            <div className="max-h-60 overflow-y-auto pr-2">
+              <div className="relative overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead className="text-center">Qtd</TableHead>
+                      <TableHead className="text-right">Custo</TableHead>
+                      <TableHead className="w-12 text-center">Ação</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">Adicione ingredientes à sua receita.</TableCell></TableRow>}
+                    {items.map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium whitespace-nowrap">{item.ingredientName}</TableCell>
+                        <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
+                        <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-6">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
-              <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-6">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
+                <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Embalagem (R$)</label>
+                <Input 
+                  type="text" 
+                  placeholder="R$ 0,00"
+                  value={packagingCost} 
+                  onChange={handlePackagingCostChange} 
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Embalagem (R$)</label>
-              <Input 
-                type="text" 
-                placeholder="R$ 0,00"
-                value={packagingCost} 
-                onChange={handlePackagingCostChange} 
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card className="bg-primary text-primary-foreground shadow-xl">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center items-center">
-            <div>
-              <p className="text-primary-foreground/70 text-xs font-bold uppercase">Custo de Produção</p>
-              <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.totalCost)}</p>
+        <Card className="bg-primary text-primary-foreground shadow-xl">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center items-center">
+              <div>
+                <p className="text-primary-foreground/70 text-xs font-bold uppercase">Custo de Produção</p>
+                <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.totalCost)}</p>
+              </div>
+              <div>
+                <p className="text-primary-foreground/70 text-xs font-bold uppercase">Sugestão de Venda</p>
+                <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.salePrice)}</p>
+              </div>
+              <div className='max-w-40 mx-auto'>
+                <p className="text-primary-foreground/70 text-xs font-bold uppercase mb-1">Margem Lucro (%)</p>
+                <Input 
+                  type="number" 
+                  value={profitMargin} 
+                  onChange={e => setProfitMargin(Number(e.target.value) || 0)}
+                  className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-xl font-bold h-12"
+                />
+              </div>
             </div>
-            <div>
-              <p className="text-primary-foreground/70 text-xs font-bold uppercase">Sugestão de Venda</p>
-              <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.salePrice)}</p>
-            </div>
-            <div className='max-w-40 mx-auto'>
-              <p className="text-primary-foreground/70 text-xs font-bold uppercase mb-1">Margem Lucro (%)</p>
-              <Input 
-                type="number" 
-                value={profitMargin} 
-                onChange={e => setProfitMargin(Number(e.target.value) || 0)}
-                className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-xl font-bold h-12"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
-
-    

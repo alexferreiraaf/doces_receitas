@@ -58,8 +58,7 @@ export function AISuggestionModal({
       })
 
       if (result.suggestedRecipes) {
-        const parsedRecipes = JSON.parse(result.suggestedRecipes);
-        setSuggestions(Array.isArray(parsedRecipes) ? parsedRecipes : []);
+        setSuggestions(Array.isArray(result.suggestedRecipes) ? result.suggestedRecipes : []);
       }
     } catch (error) {
       console.error(error)
@@ -114,7 +113,7 @@ export function AISuggestionModal({
                             <p className="text-sm font-semibold mb-2">Ingredientes Sugeridos:</p>
                             <ul className="list-disc list-inside text-sm text-muted-foreground">
                                 {suggestion.ingredients.map((ing, i) => (
-                                    <li key={i}>{ing.name} ({ing.quantity})</li>
+                                    <li key={i}>{ing.name} ({ing.quantity} {ing.unit})</li>
                                 ))}
                             </ul>
                         </CardContent>

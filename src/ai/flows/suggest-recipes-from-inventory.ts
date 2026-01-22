@@ -4,7 +4,7 @@
  * @fileOverview This file defines a Genkit flow for suggesting recipes based on the user's ingredient inventory.
  *
  * The flow takes a description of the desired recipe type and the user's current ingredient inventory as input.
- * It then uses the Genkit AI to suggest recipes that can be made with the available ingredients, providing a complete list of ingredients and quantities.
+ * It then uses the Genkit AI to suggest recipes that can be made with the available ingredients, providing a complete list of ingredients and quantities in a structured format.
  *
  * @exports suggestRecipesFromInventory - The main function to trigger the recipe suggestion flow.
  * @exports SuggestRecipesFromInventoryInput - The input type definition for the suggestRecipesFromInventory function.
@@ -30,13 +30,21 @@ export type SuggestRecipesFromInventoryInput = z.infer<
   typeof SuggestRecipesFromInventoryInputSchema
 >;
 
-const SuggestRecipesFromInventoryOutputSchema = z.object({
-  suggestedRecipes: z
-    .string()
-    .describe(
-      'A stringified JSON array of suggested recipes, including each recipe name, ingredients, and quantities.'
-    ),
+const SuggestedIngredientSchema = z.object({
+  name: z.string().describe('The name of the ingredient.'),
+  quantity: z.number().describe('The numerical quantity for the ingredient.'),
+  unit: z.string().describe("The unit of measure (e.g., 'xícaras', 'gramas', 'unidades', 'ml', 'colher de sopa')."),
 });
+
+const SuggestedRecipeSchema = z.object({
+  recipeName: z.string().describe('The name of the suggested recipe.'),
+  ingredients: z.array(SuggestedIngredientSchema),
+});
+
+const SuggestRecipesFromInventoryOutputSchema = z.object({
+  suggestedRecipes: z.array(SuggestedRecipeSchema).describe('An array of suggested recipes.'),
+});
+
 export type SuggestRecipesFromInventoryOutput = z.infer<
   typeof SuggestRecipesFromInventoryOutputSchema
 >;
@@ -56,7 +64,7 @@ const prompt = ai.definePrompt({
 Recipe Type Description: {{{recipeTypeDescription}}}
 Ingredient Inventory: {{{ingredientInventory}}}
 
-Return a JSON array of suggested recipes, including each recipe name, ingredients, and quantities. Be as specific as possible with quantities.`,
+Return a JSON object with a 'suggestedRecipes' key, containing an array of recipe objects. Each recipe object must have a 'recipeName' (string) and an 'ingredients' array. Each ingredient object in the array must have a 'name' (string), a 'quantity' (number), and a 'unit' (string, e.g., 'gramas', 'xícaras', 'ml', 'unidades'). Ensure the ingredient names match those in the provided inventory. Be as specific as possible.`,
 });
 
 const suggestRecipesFromInventoryFlow = ai.defineFlow(

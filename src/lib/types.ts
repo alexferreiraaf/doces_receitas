@@ -28,3 +28,14 @@ export type Recipe = {
   totalCost: number;
   salePrice: number;
 };
+
+export type SuggestedIngredient = {
+  name: string;
+  quantity: number;
+  unit: string;
+};
+
+export type SuggestedRecipe = {
+  recipeName: string;
+  ingredients: SuggestedIngredient[];
+};
