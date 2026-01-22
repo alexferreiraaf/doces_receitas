@@ -11,6 +11,7 @@ import { SavedRecipesTab } from '@/components/saved-recipes-tab';
 import { useState } from 'react';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { AuthForm } from '@/components/auth-form';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -111,6 +112,7 @@ export default function Home() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
           <p className="text-lg font-semibold text-primary">Carregando...</p>
           <p className="text-sm text-muted-foreground">Aguarde enquanto preparamos tudo para você.</p>
         </div>

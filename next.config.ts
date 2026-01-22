@@ -3,7 +3,11 @@ import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  // By default, PWA is disabled in development.
+  // We're enabling it here to allow for testing installability.
+  disable: false,
+  register: true,
+  skipWaiting: true,
 });
 
 
