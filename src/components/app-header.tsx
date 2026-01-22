@@ -14,8 +14,8 @@ export function AppHeader() {
         <div className="flex justify-end items-center gap-2 mb-4">
           <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
           <ThemeToggle />
-          <Button variant="outline" size="sm" onClick={signOutUser}>
-            <LogOut className="h-4 w-4 sm:mr-2" />
+          <Button variant="outline" size="sm" onClick={() => signOutUser()}>
+            <LogOut />
             <span className='hidden sm:inline'>Sair</span>
           </Button>
         </div>

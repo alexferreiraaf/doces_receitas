@@ -242,12 +242,12 @@ export function RecipeBuilder({
                 {isEditing ? 'Editando Receita' : '2. Montar Receita'}
               </CardTitle>
               <div className="flex gap-2">
-                {isEditing && <Button onClick={handleCancelEdit} size="sm" variant="outline"><XCircle className="mr-2 h-4 w-4"/>Cancelar</Button>}
+                {isEditing && <Button onClick={handleCancelEdit} size="sm" variant="outline"><XCircle/>Cancelar</Button>}
                 <Button variant="outline" size="sm" onClick={() => setIsSuggestionModalOpen(true)} className="hidden sm:flex">
-                    <Wand2 className="mr-2 h-4 w-4" />
+                    <Wand2/>
                     Usar IA
                 </Button>
-                <Button onClick={handleSaveRecipe} size="sm"><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
+                <Button onClick={handleSaveRecipe} size="sm"><Save/> {isEditing ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
               </div>
             </div>
           </CardHeader>
@@ -293,7 +293,7 @@ export function RecipeBuilder({
                   </Select>
                 </div>
 
-                <Button type="submit" className="w-full"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                <Button type="submit" className="w-full"><Plus/> Add</Button>
               </form>
             </div>
             
@@ -317,7 +317,7 @@ export function RecipeBuilder({
                         <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
                         <TableCell className="text-center">
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 />
                           </Button>
                         </TableCell>
                       </TableRow>

@@ -112,7 +112,7 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
           </div>
 
           <Button onClick={handleShare} variant="outline" className="w-full mt-4">
-            <Copy className="mr-2 h-4 w-4" /> Compartilhar Receita
+            <Copy /> Compartilhar Receita
           </Button>
         </div>
       </DialogContent>

@@ -47,7 +47,7 @@ export function IngredientList({ ingredients, onDeleteIngredient, onEditIngredie
                       className="h-7 w-7 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => handleEditClick(e, ing)}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil />
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -55,7 +55,7 @@ export function IngredientList({ ingredients, onDeleteIngredient, onEditIngredie
                       className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => onDeleteIngredient(ing.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 />
                     </Button>
                   </div>
                 </li>

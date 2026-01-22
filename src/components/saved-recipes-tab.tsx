@@ -78,12 +78,12 @@ export function SavedRecipesTab({ recipes, onDeleteRecipe, onEditRecipe }: Saved
                <CardContent className="pt-0">
                  <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="outline" size="sm" className="w-full" onClick={(e) => handleEditClick(e, recipe)}>
-                      <Pencil className="h-3 w-3 mr-2"/> Editar
+                      <Pencil/> Editar
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                          <Button variant="outline" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50" onClick={(e) => e.stopPropagation()}>
-                          <Trash2 className="h-4 w-4"/>
+                          <Trash2/>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
