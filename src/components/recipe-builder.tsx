@@ -151,8 +151,20 @@ export function RecipeBuilder({
       return;
     }
 
-    const baseQuantity = quantity * CONVERSION_RATES[displayUnit];
-    const cost = (ingredient.price / ingredient.packageQuantity) * baseQuantity;
+    let baseQuantity: number;
+    let cost: number;
+
+    if (displayUnit === 'original') {
+      // When 'Unid. Original' is selected, 'quantity' refers to the number of packages.
+      // The cost is the package price times the number of packages.
+      cost = ingredient.price * quantity;
+      // The base quantity is the package quantity times the number of packages.
+      baseQuantity = ingredient.packageQuantity * quantity;
+    } else {
+      // For other units (xicara, colher), convert display quantity to base quantity (g/ml).
+      baseQuantity = quantity * CONVERSION_RATES[displayUnit];
+      cost = (ingredient.price / ingredient.packageQuantity) * baseQuantity;
+    }
 
     const newItem: RecipeItem = {
       id: Date.now().toString(),
