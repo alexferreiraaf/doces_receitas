@@ -27,6 +27,9 @@ export type Recipe = {
   profitMargin: number;
   totalCost: number;
   salePrice: number;
+  frostingId?: string | null;
+  frostingName?: string | null;
+  frostingCost?: number;
 };
 
 export type SuggestedIngredient = {

@@ -138,6 +138,7 @@ export default function Home() {
         <TabsContent value="create">
           <CreateRecipeTab
             ingredients={ingredients}
+            recipes={recipes}
             onSaveIngredient={handleSaveIngredient}
             onDeleteIngredient={handleDeleteIngredient}
             onSaveRecipe={handleSaveRecipe}

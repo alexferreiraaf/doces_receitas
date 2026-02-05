@@ -47,6 +47,10 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
     }
   }
 
+  const massCost = recipe.items.reduce((a, b) => a + b.cost, 0);
+  const totalIngredientsCost = massCost + (recipe.frostingCost || 0);
+  const variableCostValue = totalIngredientsCost * (recipe.variableCostsPercentage / 100);
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-2xl">
@@ -57,7 +61,7 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
 
         <div className="max-h-[60vh] overflow-y-auto pr-4 space-y-6">
           <div>
-            <h3 className="font-semibold mb-2">Ingredientes</h3>
+            <h3 className="font-semibold mb-2">Ingredientes da Massa</h3>
             <div className="relative overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -84,12 +88,18 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
             <h3 className="font-semibold mb-2">Resumo Financeiro</h3>
             <div className="space-y-2 text-sm p-4 bg-muted/50 rounded-lg">
               <div className="flex justify-between">
-                <span>Custo dos Ingredientes</span>
-                <span className="font-medium">{formatCurrency(recipe.items.reduce((a, b) => a + b.cost, 0))}</span>
+                <span>Custo da Massa</span>
+                <span className="font-medium">{formatCurrency(massCost)}</span>
               </div>
+              {recipe.frostingCost && recipe.frostingCost > 0 && (
+                 <div className="flex justify-between">
+                    <span>Cobertura ({recipe.frostingName || '...'})</span>
+                    <span className="font-medium">{formatCurrency(recipe.frostingCost)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Custos Variáveis ({recipe.variableCostsPercentage}%)</span>
-                <span className="font-medium">{formatCurrency(recipe.items.reduce((a, b) => a + b.cost, 0) * (recipe.variableCostsPercentage/100))}</span>
+                <span className="font-medium">{formatCurrency(variableCostValue)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Embalagem</span>

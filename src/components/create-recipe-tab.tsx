@@ -9,6 +9,7 @@ import { RecipeBuilder } from './recipe-builder';
 
 interface CreateRecipeTabProps {
   ingredients: Ingredient[] | null;
+  recipes: Recipe[] | null;
   onSaveIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
   onDeleteIngredient: (id: string) => void;
   onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
@@ -22,6 +23,7 @@ interface CreateRecipeTabProps {
 
 export function CreateRecipeTab({ 
   ingredients, 
+  recipes,
   onSaveIngredient, 
   onDeleteIngredient,
   onSaveRecipe,
@@ -50,6 +52,7 @@ export function CreateRecipeTab({
       <div className="lg:col-span-2">
         <RecipeBuilder 
           ingredients={ingredients}
+          recipes={recipes}
           onSaveRecipe={onSaveRecipe}
           recipeToEdit={recipeToEdit}
           onRecipeSaved={onRecipeSaved}

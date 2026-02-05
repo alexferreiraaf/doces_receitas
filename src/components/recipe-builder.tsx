@@ -5,9 +5,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { Plus, Save, Trash2, XCircle, Wand2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency } from '@/lib/utils';
 import type { Ingredient, Recipe, RecipeItem, SuggestedRecipe } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +18,7 @@ import { AISuggestionModal } from './ai-suggestion-modal';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[] | null;
+  recipes: Recipe[] | null;
   onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
@@ -23,6 +27,7 @@ interface RecipeBuilderProps {
 
 export function RecipeBuilder({ 
   ingredients, 
+  recipes,
   onSaveRecipe, 
   recipeToEdit, 
   onRecipeSaved, 
@@ -40,8 +45,12 @@ export function RecipeBuilder({
   const [displayQuantity, setDisplayQuantity] = useState('');
   const [displayUnit, setDisplayUnit] = useState<'original' | 'xicara' | 'colher-sopa' | 'colher-cha'>('original');
 
+  const [hasFrosting, setHasFrosting] = useState(false);
+  const [selectedFrostingId, setSelectedFrostingId] = useState<string>('');
+
   const isEditing = !!recipeToEdit;
   const safeIngredients = ingredients || [];
+  const safeRecipes = recipes || [];
 
   useEffect(() => {
     if (recipeToEdit) {
@@ -50,6 +59,8 @@ export function RecipeBuilder({
       setVariableCosts(recipeToEdit.variableCostsPercentage);
       setPackagingCost(formatCurrency(recipeToEdit.packagingCost));
       setProfitMargin(recipeToEdit.profitMargin);
+      setHasFrosting(!!recipeToEdit.frostingId);
+      setSelectedFrostingId(recipeToEdit.frostingId || '');
     } else {
       resetForm();
     }
@@ -155,13 +166,9 @@ export function RecipeBuilder({
     let cost: number;
 
     if (displayUnit === 'original') {
-      // When 'Unid. Original' is selected, 'quantity' refers to the number of packages.
-      // The cost is the package price times the number of packages.
       cost = ingredient.price * quantity;
-      // The base quantity is the package quantity times the number of packages.
       baseQuantity = ingredient.packageQuantity * quantity;
     } else {
-      // For other units (xicara, colher), convert display quantity to base quantity (g/ml).
       baseQuantity = quantity * CONVERSION_RATES[displayUnit];
       cost = (ingredient.price / ingredient.packageQuantity) * baseQuantity;
     }
@@ -190,10 +197,16 @@ export function RecipeBuilder({
   const calculations = useMemo(() => {
     const numericPackagingCost = parseCurrency(packagingCost);
     const ingredientsCost = items.reduce((acc, item) => acc + item.cost, 0);
-    const totalCost = ingredientsCost * (1 + variableCosts / 100) + numericPackagingCost;
+    
+    const frosting = safeRecipes.find(r => r.id === selectedFrostingId);
+    const frostingCost = (hasFrosting && frosting) ? frosting.totalCost : 0;
+
+    const totalBaseCost = ingredientsCost + frostingCost;
+    const totalCost = totalBaseCost * (1 + variableCosts / 100) + numericPackagingCost;
     const salePrice = totalCost * (1 + profitMargin / 100);
-    return { ingredientsCost, totalCost, salePrice };
-  }, [items, variableCosts, packagingCost, profitMargin]);
+
+    return { ingredientsCost, frostingCost, totalCost, salePrice };
+  }, [items, variableCosts, packagingCost, profitMargin, hasFrosting, selectedFrostingId, safeRecipes]);
 
   const resetForm = () => {
     setRecipeName('');
@@ -204,6 +217,8 @@ export function RecipeBuilder({
     setSelectedIngredientId('');
     setDisplayQuantity('');
     setDisplayUnit('original');
+    setHasFrosting(false);
+    setSelectedFrostingId('');
   }
 
   const handleCancelEdit = () => {
@@ -221,6 +236,8 @@ export function RecipeBuilder({
       return;
     }
 
+    const frosting = safeRecipes.find(r => r.id === selectedFrostingId);
+
     const recipeData = {
       name: recipeName,
       items,
@@ -229,6 +246,9 @@ export function RecipeBuilder({
       profitMargin,
       totalCost: calculations.totalCost,
       salePrice: calculations.salePrice,
+      frostingId: (hasFrosting && frosting) ? frosting.id : null,
+      frostingName: (hasFrosting && frosting) ? frosting.name : null,
+      frostingCost: calculations.frostingCost,
     };
 
     onSaveRecipe(recipeData);
@@ -314,7 +334,7 @@ export function RecipeBuilder({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Item</TableHead>
+                      <TableHead>Item (Massa)</TableHead>
                       <TableHead className="text-center">Qtd</TableHead>
                       <TableHead className="text-right">Custo</TableHead>
                       <TableHead className="w-12 text-center">Ação</TableHead>
@@ -339,23 +359,88 @@ export function RecipeBuilder({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-6">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
-                <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Embalagem (R$)</label>
-                <Input 
-                  type="text" 
-                  placeholder="R$ 0,00"
-                  value={packagingCost} 
-                  onChange={handlePackagingCostChange} 
-                />
+            <div className="border-t pt-6 space-y-4">
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="has-frosting"
+                        checked={hasFrosting}
+                        onCheckedChange={setHasFrosting}
+                    />
+                    <Label htmlFor="has-frosting">Adicionar Cobertura?</Label>
+                </div>
+
+                {hasFrosting && (
+                    <div className='p-4 rounded-lg border bg-muted/20'>
+                        <label className="block text-sm font-medium text-foreground mb-1">Receita da Cobertura</label>
+                        <Select onValueChange={setSelectedFrostingId} value={selectedFrostingId}>
+                            <SelectTrigger><SelectValue placeholder="Selecione uma receita..." /></SelectTrigger>
+                            <SelectContent>
+                                {safeRecipes
+                                    .filter(r => r.id !== recipeToEdit?.id)
+                                    .map(recipe => (
+                                        <SelectItem key={recipe.id} value={recipe.id}>
+                                            {recipe.name} ({formatCurrency(recipe.totalCost)})
+                                        </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
+                  <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Embalagem (R$)</label>
+                  <Input 
+                    type="text" 
+                    placeholder="R$ 0,00"
+                    value={packagingCost} 
+                    onChange={handlePackagingCostChange} 
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+              <CardTitle className="text-lg font-semibold">Resumo de Custos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                  <span>Custo dos Ingredientes (Massa)</span>
+                  <span className="font-medium">{formatCurrency(calculations.ingredientsCost)}</span>
+              </div>
+              {hasFrosting && calculations.frostingCost > 0 && (
+                  <div className="flex justify-between">
+                      <span>Custo da Cobertura</span>
+                      <span className="font-medium">{formatCurrency(calculations.frostingCost)}</span>
+                  </div>
+              )}
+              <div className="flex justify-between">
+                  <span>Subtotal (Insumos)</span>
+                  <span className="font-semibold">{formatCurrency(calculations.ingredientsCost + calculations.frostingCost)}</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between">
+                  <span>+ Custos Variáveis ({variableCosts}%)</span>
+                  <span className="font-medium">{formatCurrency((calculations.ingredientsCost + calculations.frostingCost) * (variableCosts / 100))}</span>
+              </div>
+              <div className="flex justify-between">
+                  <span>+ Embalagem</span>
+                  <span className="font-medium">{formatCurrency(parseCurrency(packagingCost))}</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between font-bold text-base">
+                  <span>CUSTO DE PRODUÇÃO</span>
+                  <span className="text-primary">{formatCurrency(calculations.totalCost)}</span>
+              </div>
+          </CardContent>
+      </Card>
+
 
         <Card className="bg-primary text-primary-foreground shadow-xl">
           <CardContent className="p-6">
