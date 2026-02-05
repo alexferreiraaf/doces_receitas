@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Save, Trash2, XCircle, Wand2 } from 'lucide-react';
+import { Plus, Save, Trash2, XCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
@@ -12,9 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency } from '@/lib/utils';
-import type { Ingredient, Recipe, RecipeItem, SuggestedRecipe } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { AISuggestionModal } from './ai-suggestion-modal';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[] | null;
@@ -38,7 +36,6 @@ export function RecipeBuilder({
   const [variableCosts, setVariableCosts] = useState(10);
   const [packagingCost, setPackagingCost] = useState('');
   const [profitMargin, setProfitMargin] = useState(100);
-  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const { toast } = useToast();
 
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
@@ -65,77 +62,6 @@ export function RecipeBuilder({
       resetForm();
     }
   }, [recipeToEdit]);
-
-  const handleUseSuggestion = (suggestion: SuggestedRecipe) => {
-    resetForm();
-    setRecipeName(suggestion.recipeName);
-
-    const mapUnit = (unit: string): RecipeItem['displayUnit'] => {
-      const lowerUnit = unit.toLowerCase();
-      if (lowerUnit.includes('xicara') || lowerUnit.includes('xícara')) return 'xicara';
-      if (lowerUnit.includes('sopa')) return 'colher-sopa';
-      if (lowerUnit.includes('chá') || lowerUnit.includes('cha')) return 'colher-cha';
-      return 'original';
-    };
-
-    const newItems: RecipeItem[] = suggestion.ingredients
-      .map(suggIng => {
-        const inventoryIng = safeIngredients.find(
-          i => i.name.toLowerCase() === suggIng.name.toLowerCase()
-        );
-
-        if (!inventoryIng) return null;
-
-        const displayUnit = mapUnit(suggIng.unit);
-        const displayQuantity = suggIng.quantity;
-        
-        let baseQuantity: number;
-        if (displayUnit !== 'original') {
-            baseQuantity = displayQuantity * (CONVERSION_RATES[displayUnit] || 1);
-        } else {
-            const lowerUnit = suggIng.unit.toLowerCase();
-            if (['g', 'ml', 'un'].includes(lowerUnit) && lowerUnit === inventoryIng.packageUnit) {
-                baseQuantity = displayQuantity;
-            } else {
-                baseQuantity = displayQuantity; // Fallback for 'unidades' etc.
-            }
-        }
-
-        const cost = (inventoryIng.price / inventoryIng.packageQuantity) * baseQuantity;
-
-        if (isNaN(cost) || !isFinite(cost)) return null;
-
-        return {
-          id: `${Date.now()}-${suggIng.name}`,
-          ingredientId: inventoryIng.id,
-          ingredientName: inventoryIng.name,
-          displayQuantity,
-          displayUnit,
-          baseQuantity,
-          cost,
-        };
-      })
-      .filter((item): item is RecipeItem => item !== null);
-
-    setItems(newItems);
-
-    const unmatched = suggestion.ingredients.filter(
-      suggIng => !safeIngredients.some(i => i.name.toLowerCase() === suggIng.name.toLowerCase())
-    );
-
-    if (unmatched.length > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Alguns ingredientes não foram encontrados',
-        description: `Os seguintes itens não estão no seu inventário: ${unmatched.map(i => i.name).join(', ')}.`,
-      });
-    }
-
-    toast({
-        title: 'Receita preenchida!',
-        description: `A receita para "${suggestion.recipeName}" foi carregada. Verifique os itens antes de salvar.`
-    })
-  };
 
   const handlePackagingCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -260,12 +186,6 @@ export function RecipeBuilder({
   
   return (
     <>
-      <AISuggestionModal
-        isOpen={isSuggestionModalOpen}
-        setIsOpen={setIsSuggestionModalOpen}
-        ingredients={safeIngredients}
-        onUseSuggestion={handleUseSuggestion}
-      />
       <div className="space-y-8">
         <Card className="border-t-4 border-primary">
           <CardHeader>
@@ -275,10 +195,6 @@ export function RecipeBuilder({
               </CardTitle>
               <div className="flex gap-2">
                 {isEditing && <Button onClick={handleCancelEdit} size="sm" variant="outline"><XCircle/>Cancelar</Button>}
-                <Button variant="outline" size="sm" onClick={() => setIsSuggestionModalOpen(true)} className="hidden sm:flex">
-                    <Wand2/>
-                    Usar IA
-                </Button>
                 <Button onClick={handleSaveRecipe} size="sm"><Save/> {isEditing ? 'Atualizar Receita' : 'Salvar Receita'}</Button>
               </div>
             </div>
@@ -381,7 +297,7 @@ export function RecipeBuilder({
                                         <SelectItem key={recipe.id} value={recipe.id}>
                                             {recipe.name} ({formatCurrency(recipe.totalCost)})
                                         </SelectItem>
-                                ))}
+                                    ))}
                             </SelectContent>
                         </Select>
                     </div>
