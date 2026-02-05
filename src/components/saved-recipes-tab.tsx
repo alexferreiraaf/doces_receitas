@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { formatCurrency } from '@/lib/utils';
-import type { Recipe } from '@/lib/types';
+import { formatCurrency, calculateRecipeCosts } from '@/lib/utils';
+import type { Recipe, Ingredient } from '@/lib/types';
 import { RecipeDetailModal } from './recipe-detail-modal';
 import { Pencil, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -14,11 +14,12 @@ import { ptBR } from 'date-fns/locale';
 
 interface SavedRecipesTabProps {
   recipes: Recipe[];
+  ingredients: Ingredient[];
   onDeleteRecipe: (id: string) => void;
   onEditRecipe: (recipe: Recipe) => void;
 }
 
-export function SavedRecipesTab({ recipes, onDeleteRecipe, onEditRecipe }: SavedRecipesTabProps) {
+export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRecipe }: SavedRecipesTabProps) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -49,7 +50,9 @@ export function SavedRecipesTab({ recipes, onDeleteRecipe, onEditRecipe }: Saved
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recipes.map(recipe => (
+          {recipes.map(recipe => {
+            const { totalCost, salePrice } = calculateRecipeCosts(recipe, ingredients, recipes);
+            return (
             <Card 
               key={recipe.id}
               className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group"
@@ -66,11 +69,11 @@ export function SavedRecipesTab({ recipes, onDeleteRecipe, onEditRecipe }: Saved
                   <div className="flex justify-between items-center border-t pt-4">
                     <div>
                       <p className="text-xs text-muted-foreground uppercase">Custo</p>
-                      <p className="font-bold text-primary">{formatCurrency(recipe.totalCost)}</p>
+                      <p className="font-bold text-primary">{formatCurrency(totalCost)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground uppercase">Sugestão Venda</p>
-                      <p className="font-bold text-green-600">{formatCurrency(recipe.salePrice)}</p>
+                      <p className="font-bold text-green-600">{formatCurrency(salePrice)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -102,13 +105,15 @@ export function SavedRecipesTab({ recipes, onDeleteRecipe, onEditRecipe }: Saved
                  </div>
                </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
 
       {selectedRecipe && (
         <RecipeDetailModal
           recipe={selectedRecipe}
+          ingredients={ingredients}
+          recipes={recipes}
           isOpen={!!selectedRecipe}
           setIsOpen={() => setSelectedRecipe(null)}
         />

@@ -14,7 +14,7 @@ export type RecipeItem = {
   displayQuantity: number;
   displayUnit: 'original' | 'xicara' | 'colher-sopa' | 'colher-cha';
   baseQuantity: number;
-  cost: number;
+  cost?: number; // Calculated at runtime
 };
 
 export type Recipe = {
@@ -25,9 +25,11 @@ export type Recipe = {
   variableCostsPercentage: number;
   packagingCost: number;
   profitMargin: number;
-  totalCost: number;
-  salePrice: number;
   frostingId?: string | null;
+
+  // Calculated at runtime
+  totalCost?: number;
+  salePrice?: number;
   frostingName?: string | null;
   frostingCost?: number;
 };

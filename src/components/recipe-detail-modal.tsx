@@ -3,8 +3,8 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatCurrency, UNIT_LABELS } from '@/lib/utils';
-import type { Recipe } from '@/lib/types';
+import { formatCurrency, UNIT_LABELS, calculateRecipeCosts } from '@/lib/utils';
+import type { Recipe, Ingredient } from '@/lib/types';
 import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
 import { Copy } from "lucide-react";
@@ -14,14 +14,29 @@ import { ptBR } from 'date-fns/locale';
 
 interface RecipeDetailModalProps {
   recipe: Recipe | null;
+  ingredients: Ingredient[];
+  recipes: Recipe[];
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
 }
 
-export function RecipeDetailModal({ recipe, isOpen, setIsOpen }: RecipeDetailModalProps) {
+export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsOpen }: RecipeDetailModalProps) {
   const { toast } = useToast();
 
   if (!recipe) return null;
+
+  const { totalCost, salePrice, ingredientsCost, frostingCost, frostingName } = calculateRecipeCosts(recipe, ingredients, recipes);
+
+  const itemsWithCost = recipe.items.map(item => {
+    const ingredient = ingredients.find(i => i.id === item.ingredientId);
+    let cost = 0;
+    if (ingredient && ingredient.price && ingredient.packageQuantity) {
+      cost = (ingredient.price / ingredient.packageQuantity) * item.baseQuantity;
+    }
+    return { ...item, cost };
+  });
+
+  const variableCostValue = (ingredientsCost + frostingCost) * (recipe.variableCostsPercentage / 100);
 
   const formatDate = (dateString: string) => {
     try {
@@ -38,18 +53,14 @@ Receita: ${recipe.name}
 Ingredientes:
 ${recipe.items.map(i => `- ${i.ingredientName}: ${i.displayQuantity} ${UNIT_LABELS[i.displayUnit].split(' ')[0]}`).join('\n')}
 
-Custo Total: ${formatCurrency(recipe.totalCost)}
-Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
+Custo Total: ${formatCurrency(totalCost)}
+Preço de Venda Sugerido: ${formatCurrency(salePrice)}
 `;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareableText.trim());
       toast({ title: 'Copiado!', description: 'Receita copiada para a área de transferência.' });
     }
   }
-
-  const massCost = recipe.items.reduce((a, b) => a + b.cost, 0);
-  const totalIngredientsCost = massCost + (recipe.frostingCost || 0);
-  const variableCostValue = totalIngredientsCost * (recipe.variableCostsPercentage / 100);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -72,7 +83,7 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recipe.items.map(item => (
+                  {itemsWithCost.map(item => (
                     <TableRow key={item.id}>
                       <TableCell className="whitespace-nowrap">{item.ingredientName}</TableCell>
                       <TableCell className="text-muted-foreground whitespace-nowrap">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
@@ -89,12 +100,12 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
             <div className="space-y-2 text-sm p-4 bg-muted/50 rounded-lg">
               <div className="flex justify-between">
                 <span>Custo da Massa</span>
-                <span className="font-medium">{formatCurrency(massCost)}</span>
+                <span className="font-medium">{formatCurrency(ingredientsCost)}</span>
               </div>
-              {recipe.frostingCost && recipe.frostingCost > 0 && (
+              {frostingCost > 0 && (
                  <div className="flex justify-between">
-                    <span>Cobertura ({recipe.frostingName || '...'})</span>
-                    <span className="font-medium">{formatCurrency(recipe.frostingCost)}</span>
+                    <span>Cobertura ({frostingName || '...'})</span>
+                    <span className="font-medium">{formatCurrency(frostingCost)}</span>
                 </div>
               )}
               <div className="flex justify-between">
@@ -108,7 +119,7 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
               <Separator className="my-2 bg-border" />
               <div className="flex justify-between font-bold text-base">
                 <span>CUSTO TOTAL</span>
-                <span className="text-primary">{formatCurrency(recipe.totalCost)}</span>
+                <span className="text-primary">{formatCurrency(totalCost)}</span>
               </div>
             </div>
           </div>
@@ -118,7 +129,7 @@ Preço de Venda Sugerido: ${formatCurrency(recipe.salePrice)}
               <p className="text-xs text-green-700 dark:text-green-300 font-bold uppercase">Preço de Venda Sugerido</p>
               <p className="text-sm text-green-600 dark:text-green-400">(Margem de {recipe.profitMargin}%)</p>
             </div>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-300">{formatCurrency(recipe.salePrice)}</p>
+            <p className="text-2xl font-bold text-green-700 dark:text-green-300">{formatCurrency(salePrice)}</p>
           </div>
 
           <Button onClick={handleShare} variant="outline" className="w-full mt-4">

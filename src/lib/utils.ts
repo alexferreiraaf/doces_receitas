@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { Recipe, Ingredient } from '@/lib/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -40,4 +41,51 @@ export const UNIT_LABELS = {
   'colher-cha': 'Colher Chá (5g/ml)',
 }
 
+export function calculateRecipeCosts(
+  recipe: Recipe,
+  allIngredients: Ingredient[],
+  allRecipes: Recipe[]
+) {
+  const ingredientMap = new Map(allIngredients.map(i => [i.id, i]));
+  const recipeMap = new Map(allRecipes.map(r => [r.id, r]));
+
+  // Memoization map for the recursive calculation within a single run
+  const memo = new Map<string, { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null }>();
+
+  function calculate(recipeToCalc: Recipe): { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null } {
+    if (memo.has(recipeToCalc.id)) {
+      return memo.get(recipeToCalc.id)!;
+    }
+
+    const ingredientsCost = recipeToCalc.items.reduce((acc, item) => {
+      const ingredient = ingredientMap.get(item.ingredientId);
+      if (!ingredient || typeof ingredient.price !== 'number' || typeof ingredient.packageQuantity !== 'number' || ingredient.packageQuantity === 0) return acc;
+      
+      const itemCost = (ingredient.price / ingredient.packageQuantity) * item.baseQuantity;
+      return acc + itemCost;
+    }, 0);
+
+    let frostingCost = 0;
+    let frostingName: string | null = null;
+    if (recipeToCalc.frostingId) {
+      const frostingRecipe = recipeMap.get(recipeToCalc.frostingId);
+      if (frostingRecipe) {
+        // Recursive call
+        const nestedCosts = calculate(frostingRecipe);
+        frostingCost = nestedCosts.totalCost;
+        frostingName = frostingRecipe.name;
+      }
+    }
     
+    const totalIngredientsCost = ingredientsCost + frostingCost;
+    const variableCostValue = totalIngredientsCost * (recipeToCalc.variableCostsPercentage / 100);
+    const totalCost = totalIngredientsCost + variableCostValue + recipeToCalc.packagingCost;
+    const salePrice = totalCost * (1 + recipeToCalc.profitMargin / 100);
+
+    const result = { totalCost, salePrice, ingredientsCost, frostingCost, frostingName };
+    memo.set(recipeToCalc.id, result);
+    return result;
+  }
+
+  return calculate(recipe);
+}

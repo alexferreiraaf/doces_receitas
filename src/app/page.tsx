@@ -3,7 +3,7 @@
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import type { Ingredient, Recipe } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from '@/components/app-header';
 import { CreateRecipeTab } from '@/components/create-recipe-tab';
@@ -66,20 +66,38 @@ export default function Home() {
   const handleSaveRecipe = (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => {
     if (!user) return;
 
+    // This object contains only the data that should be persisted to Firestore.
+    const recipeToStore = {
+      name: recipeData.name,
+      // Strip the 'cost' property from each item before saving
+      items: recipeData.items.map(({ id, ingredientId, ingredientName, displayQuantity, displayUnit, baseQuantity }) => ({
+        id,
+        ingredientId,
+        ingredientName,
+        displayQuantity,
+        displayUnit,
+        baseQuantity,
+      })),
+      variableCostsPercentage: recipeData.variableCostsPercentage,
+      packagingCost: recipeData.packagingCost,
+      profitMargin: recipeData.profitMargin,
+      frostingId: recipeData.frostingId || null,
+    };
+
     if (recipeToEdit) { // Editing
-      const updatedRecipe = { 
-        ...recipeData, 
-        id: recipeToEdit.id, 
-        createdAt: recipeToEdit.createdAt 
+      const updatedRecipe = {
+        ...recipeToStore,
+        id: recipeToEdit.id,
+        createdAt: recipeToEdit.createdAt
       };
       const recipeRef = doc(firestore, 'users', user.uid, 'recipes', recipeToEdit.id);
       setDocumentNonBlocking(recipeRef, updatedRecipe, { merge: true });
     } else { // Creating
       const id = doc(collection(firestore, 'users', user.uid, 'recipes')).id;
-      const newRecipe = { 
-        ...recipeData, 
-        id, 
-        createdAt: new Date().toISOString() 
+      const newRecipe = {
+        ...recipeToStore,
+        id,
+        createdAt: new Date().toISOString()
       };
       const recipeRef = doc(firestore, 'users', user.uid, 'recipes', id);
       setDocumentNonBlocking(recipeRef, newRecipe, { merge: true });
@@ -153,6 +171,7 @@ export default function Home() {
         <TabsContent value="saved">
           <SavedRecipesTab
             recipes={recipes}
+            ingredients={ingredients}
             onDeleteRecipe={handleDeleteRecipe}
             onEditRecipe={handleEditRecipe}
           />
