@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency } from '@/lib/utils';
+import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency, calculateRecipeCosts } from '@/lib/utils';
 import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,8 +51,19 @@ export function RecipeBuilder({
 
   useEffect(() => {
     if (recipeToEdit) {
+      const ingredientMap = new Map(safeIngredients.map(i => [i.id, i]));
+      
+      const itemsWithCost = recipeToEdit.items.map(item => {
+        const ingredient = ingredientMap.get(item.ingredientId);
+        let cost = 0;
+        if (ingredient && typeof ingredient.price === 'number' && typeof ingredient.packageQuantity === 'number' && ingredient.packageQuantity > 0) {
+            cost = (ingredient.price / ingredient.packageQuantity) * item.baseQuantity;
+        }
+        return { ...item, cost };
+      });
+
       setRecipeName(recipeToEdit.name);
-      setItems(recipeToEdit.items);
+      setItems(itemsWithCost);
       setVariableCosts(recipeToEdit.variableCostsPercentage);
       setPackagingCost(formatCurrency(recipeToEdit.packagingCost));
       setProfitMargin(recipeToEdit.profitMargin);
@@ -61,7 +72,7 @@ export function RecipeBuilder({
     } else {
       resetForm();
     }
-  }, [recipeToEdit]);
+  }, [recipeToEdit, safeIngredients]);
 
   const handlePackagingCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -122,17 +133,23 @@ export function RecipeBuilder({
   
   const calculations = useMemo(() => {
     const numericPackagingCost = parseCurrency(packagingCost);
-    const ingredientsCost = items.reduce((acc, item) => acc + item.cost, 0);
+    const ingredientsCost = items.reduce((acc, item) => acc + (item.cost || 0), 0);
     
-    const frosting = safeRecipes.find(r => r.id === selectedFrostingId);
-    const frostingCost = (hasFrosting && frosting) ? frosting.totalCost : 0;
+    let frostingCost = 0;
+    const frostingRecipe = hasFrosting ? safeRecipes.find(r => r.id === selectedFrostingId) : null;
+
+    if (frostingRecipe) {
+        const calculatedFrosting = calculateRecipeCosts(frostingRecipe, safeIngredients, safeRecipes);
+        frostingCost = calculatedFrosting.totalCost;
+    }
 
     const totalBaseCost = ingredientsCost + frostingCost;
-    const totalCost = totalBaseCost * (1 + variableCosts / 100) + numericPackagingCost;
+    const variableCostValue = totalBaseCost * (variableCosts / 100);
+    const totalCost = totalBaseCost + variableCostValue + numericPackagingCost;
     const salePrice = totalCost * (1 + profitMargin / 100);
 
     return { ingredientsCost, frostingCost, totalCost, salePrice };
-  }, [items, variableCosts, packagingCost, profitMargin, hasFrosting, selectedFrostingId, safeRecipes]);
+  }, [items, variableCosts, packagingCost, profitMargin, hasFrosting, selectedFrostingId, safeRecipes, safeIngredients]);
 
   const resetForm = () => {
     setRecipeName('');
@@ -162,22 +179,16 @@ export function RecipeBuilder({
       return;
     }
 
-    const frosting = safeRecipes.find(r => r.id === selectedFrostingId);
-
     const recipeData = {
       name: recipeName,
       items,
       variableCostsPercentage: variableCosts,
       packagingCost: parseCurrency(packagingCost),
       profitMargin,
-      totalCost: calculations.totalCost,
-      salePrice: calculations.salePrice,
-      frostingId: (hasFrosting && frosting) ? frosting.id : null,
-      frostingName: (hasFrosting && frosting) ? frosting.name : null,
-      frostingCost: calculations.frostingCost,
+      frostingId: hasFrosting ? selectedFrostingId : null,
     };
 
-    onSaveRecipe(recipeData);
+    onSaveRecipe(recipeData as Omit<Recipe, 'id' | 'createdAt'>);
     toast({ title: 'Sucesso!', description: `Receita "${recipeName}" salva.` });
     
     resetForm();
@@ -262,7 +273,7 @@ export function RecipeBuilder({
                       <TableRow key={item.id}>
                         <TableCell className="font-medium whitespace-nowrap">{item.ingredientName}</TableCell>
                         <TableCell className="text-center text-sm text-muted-foreground">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
-                        <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost)}</TableCell>
+                        <TableCell className="text-right font-semibold text-primary">{formatCurrency(item.cost || 0)}</TableCell>
                         <TableCell className="text-center">
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
                             <Trash2 />
@@ -293,11 +304,14 @@ export function RecipeBuilder({
                             <SelectContent>
                                 {safeRecipes
                                     .filter(r => r.id !== recipeToEdit?.id)
-                                    .map(recipe => (
+                                    .map(recipe => {
+                                      const { totalCost } = calculateRecipeCosts(recipe, safeIngredients, safeRecipes);
+                                      return (
                                         <SelectItem key={recipe.id} value={recipe.id}>
-                                            {recipe.name} ({formatCurrency(recipe.totalCost)})
+                                            {recipe.name} ({formatCurrency(totalCost)})
                                         </SelectItem>
-                                    ))}
+                                    );
+                                    })}
                             </SelectContent>
                         </Select>
                     </div>
