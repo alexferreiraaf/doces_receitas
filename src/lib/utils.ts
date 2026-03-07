@@ -51,11 +51,19 @@ export function calculateRecipeCosts(
 
   // Memoization map for the recursive calculation within a single run
   const memo = new Map<string, { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null }>();
+  // Visited set to prevent infinite recursion
+  const visited = new Set<string>();
 
   function calculate(recipeToCalc: Recipe): { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null } {
     if (memo.has(recipeToCalc.id)) {
       return memo.get(recipeToCalc.id)!;
     }
+
+    if (visited.has(recipeToCalc.id)) {
+      return { totalCost: 0, salePrice: 0, ingredientsCost: 0, frostingCost: 0, frostingName: 'Erro: Loop de Cobertura' };
+    }
+
+    visited.add(recipeToCalc.id);
 
     const ingredientsCost = recipeToCalc.items.reduce((acc, item) => {
       const ingredient = ingredientMap.get(item.ingredientId);
@@ -67,7 +75,7 @@ export function calculateRecipeCosts(
 
     let frostingCost = 0;
     let frostingName: string | null = null;
-    if (recipeToCalc.frostingId) {
+    if (recipeToCalc.frostingId && recipeToCalc.frostingId !== recipeToCalc.id) {
       const frostingRecipe = recipeMap.get(recipeToCalc.frostingId);
       if (frostingRecipe) {
         // Recursive call
@@ -84,6 +92,7 @@ export function calculateRecipeCosts(
 
     const result = { totalCost, salePrice, ingredientsCost, frostingCost, frostingName };
     memo.set(recipeToCalc.id, result);
+    visited.delete(recipeToCalc.id);
     return result;
   }
 
