@@ -85,10 +85,14 @@ export function calculateRecipeCosts(
       }
     }
     
+    const packagingCost = recipeToCalc.packagingCost || 0;
+    const variableCostsPercentage = recipeToCalc.variableCostsPercentage || 0;
+    const profitMargin = recipeToCalc.profitMargin || 0;
+
     const totalIngredientsCost = ingredientsCost + frostingCost;
-    const variableCostValue = totalIngredientsCost * (recipeToCalc.variableCostsPercentage / 100);
-    const totalCost = totalIngredientsCost + variableCostValue + recipeToCalc.packagingCost;
-    const salePrice = totalCost * (1 + recipeToCalc.profitMargin / 100);
+    const variableCostValue = totalIngredientsCost * (variableCostsPercentage / 100);
+    const totalCost = totalIngredientsCost + variableCostValue + packagingCost;
+    const salePrice = totalCost * (1 + profitMargin / 100);
 
     const result = { totalCost, salePrice, ingredientsCost, frostingCost, frostingName };
     memo.set(recipeToCalc.id, result);

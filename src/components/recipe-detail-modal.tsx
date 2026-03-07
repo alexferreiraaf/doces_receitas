@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -47,11 +46,13 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
   }
   
   const handleShare = () => {
+    const frostingPart = frostingCost > 0 ? `\nCobertura: ${frostingName} (${formatCurrency(frostingCost)})` : '';
+    
     const shareableText = `
 Receita: ${recipe.name}
 
 Ingredientes:
-${recipe.items.map(i => `- ${i.ingredientName}: ${i.displayQuantity} ${UNIT_LABELS[i.displayUnit].split(' ')[0]}`).join('\n')}
+${recipe.items.map(i => `- ${i.ingredientName}: ${i.displayQuantity} ${UNIT_LABELS[i.displayUnit].split(' ')[0]}`).join('\n')}${frostingPart}
 
 Custo Total: ${formatCurrency(totalCost)}
 Preço de Venda Sugerido: ${formatCurrency(salePrice)}
