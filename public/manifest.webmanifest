@@ -1,6 +1,6 @@
 {
   "name": "Doce Estimativa",
-  "short_name": "DoceEstimativa",
+  "short_name": "DoceEst",
   "description": "Gestão Profissional de Custos e Receitas",
   "start_url": "/",
   "display": "standalone",
@@ -10,12 +10,26 @@
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
