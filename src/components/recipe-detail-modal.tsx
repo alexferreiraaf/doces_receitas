@@ -39,9 +39,10 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
 
   const formatDate = (dateString: string) => {
     try {
+      if (!dateString) return "Data não disponível";
       return format(parseISO(dateString), "'Salva em' dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
     } catch (e) {
-      return `Salva em data inválida`;
+      return `Salva em ${dateString || 'data desconhecida'}`;
     }
   }
   

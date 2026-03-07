@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -34,6 +33,7 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
 
   const formatDate = (dateString: string) => {
     try {
+      if (!dateString) return "Recém criada";
       return format(parseISO(dateString), "dd/MM/yyyy");
     } catch (e) {
       return "Data inválida";
