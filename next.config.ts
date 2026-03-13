@@ -4,7 +4,7 @@ import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: false, // Ativado para permitir teste de instalação
+  disable: false, // Ativado para permitir teste de instalação em desenvolvimento
   register: true,
   skipWaiting: true,
   pwaEventHandlers: {

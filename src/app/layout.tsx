@@ -8,9 +8,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 export const metadata: Metadata = {
   title: "Doce Estimativa",
   description: "Gestão Profissional de Custos e Receitas",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Doce Estimativa",
   },
   formatDetection: {
