@@ -3,16 +3,15 @@ import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  // By default, PWA is disabled in development.
-  // We're enabling it here to allow for testing installability.
   disable: false,
   register: true,
   skipWaiting: true,
+  pwaEventHandlers: {
+    onInconsistentSw: "reload",
+  },
 });
 
-
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
