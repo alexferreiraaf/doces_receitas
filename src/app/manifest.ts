@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -7,6 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Gestão Profissional de Custos e Receitas',
     start_url: '/',
     display: 'standalone',
+    orientation: 'portrait',
     background_color: '#FCE4EC',
     theme_color: '#db2777',
     icons: [
