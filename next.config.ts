@@ -4,12 +4,12 @@ import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: false, // Ativado para permitir teste de instalação em desenvolvimento
+  disable: false,
   register: true,
   skipWaiting: true,
-  pwaEventHandlers: {
-    onInconsistentSw: "reload",
-  },
+  reloadOnOnline: true,
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
 });
 
 const nextConfig: NextConfig = {

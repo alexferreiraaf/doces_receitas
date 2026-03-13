@@ -4,13 +4,15 @@ import { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Doce Estimativa',
-    short_name: 'DoceEst',
-    description: 'Gestão Profissional de Custos e Receitas',
+    short_name: 'Doce Est',
+    description: 'Gestão Profissional de Custos e Receitas para Confeitaria',
     start_url: '/',
     display: 'standalone',
-    orientation: 'portrait',
     background_color: '#FCE4EC',
     theme_color: '#db2777',
+    orientation: 'portrait',
+    scope: '/',
+    id: '/',
     icons: [
       {
         src: '/icons/icon-192x192.png',
