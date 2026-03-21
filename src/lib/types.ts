@@ -25,6 +25,7 @@ export type Recipe = {
   variableCostsPercentage: number;
   packagingCost: number;
   profitMargin: number;
+  isFrosting: boolean; // Flag to identify if the recipe is a base frosting/filling
   frostingId?: string | null;
 
   // Calculated at runtime

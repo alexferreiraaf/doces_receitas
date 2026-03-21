@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
@@ -71,7 +72,6 @@ export default function Home() {
     // This object contains only the data that should be persisted to Firestore.
     const recipeToStore = {
       name: recipeData.name,
-      // Strip the 'cost' property from each item before saving
       items: recipeData.items.map(({ id, ingredientId, ingredientName, displayQuantity, displayUnit, baseQuantity }) => ({
         id,
         ingredientId,
@@ -83,6 +83,7 @@ export default function Home() {
       variableCostsPercentage: recipeData.variableCostsPercentage,
       packagingCost: recipeData.packagingCost,
       profitMargin: recipeData.profitMargin,
+      isFrosting: recipeData.isFrosting,
       frostingId: recipeData.frostingId || null,
     };
 
@@ -130,6 +131,7 @@ export default function Home() {
       variableCostsPercentage: recipe.variableCostsPercentage,
       packagingCost: recipe.packagingCost,
       profitMargin: recipe.profitMargin,
+      isFrosting: recipe.isFrosting || false,
       frostingId: recipe.frostingId || null,
       id,
       createdAt: new Date().toISOString()

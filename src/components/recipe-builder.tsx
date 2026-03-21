@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Save, Trash2, XCircle } from 'lucide-react';
+import { Plus, Save, Trash2, XCircle, Info } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency, calculateRecipeCosts } from '@/lib/utils';
 import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[] | null;
@@ -36,6 +38,7 @@ export function RecipeBuilder({
   const [variableCosts, setVariableCosts] = useState(10);
   const [packagingCost, setPackagingCost] = useState('');
   const [profitMargin, setProfitMargin] = useState(100);
+  const [isFrosting, setIsFrosting] = useState(false);
   const { toast } = useToast();
 
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
@@ -48,6 +51,11 @@ export function RecipeBuilder({
   const isEditing = !!recipeToEdit;
   const safeIngredients = ingredients || [];
   const safeRecipes = recipes || [];
+
+  // Filter recipes that are marked as frosting to be used as sub-components
+  const availableFrostings = useMemo(() => {
+    return safeRecipes.filter(r => r.isFrosting && r.id !== recipeToEdit?.id);
+  }, [safeRecipes, recipeToEdit]);
 
   useEffect(() => {
     if (recipeToEdit) {
@@ -67,6 +75,7 @@ export function RecipeBuilder({
       setVariableCosts(recipeToEdit.variableCostsPercentage);
       setPackagingCost(formatCurrency(recipeToEdit.packagingCost));
       setProfitMargin(recipeToEdit.profitMargin);
+      setIsFrosting(recipeToEdit.isFrosting || false);
       setHasFrosting(!!recipeToEdit.frostingId);
       setSelectedFrostingId(recipeToEdit.frostingId || '');
     } else {
@@ -157,6 +166,7 @@ export function RecipeBuilder({
     setVariableCosts(10);
     setPackagingCost('');
     setProfitMargin(100);
+    setIsFrosting(false);
     setSelectedIngredientId('');
     setDisplayQuantity('');
     setDisplayUnit('original');
@@ -185,6 +195,7 @@ export function RecipeBuilder({
       variableCostsPercentage: variableCosts,
       packagingCost: parseCurrency(packagingCost),
       profitMargin,
+      isFrosting,
       frostingId: hasFrosting ? selectedFrostingId : null,
     };
 
@@ -211,14 +222,34 @@ export function RecipeBuilder({
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Nome da Receita</label>
-              <Input 
-                value={recipeName}
-                onChange={(e) => setRecipeName(e.target.value)}
-                placeholder="Ex: Bolo Vulcão de Cenoura"
-                className="text-lg font-bold"
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-grow">
+                <label className="block text-sm font-medium text-foreground mb-1">Nome da Receita</label>
+                <Input 
+                  value={recipeName}
+                  onChange={(e) => setRecipeName(e.target.value)}
+                  placeholder="Ex: Bolo Vulcão de Cenoura"
+                  className="text-lg font-bold"
+                />
+              </div>
+              <div className="flex items-center space-x-2 pt-6">
+                <Switch
+                  id="is-frosting"
+                  checked={isFrosting}
+                  onCheckedChange={setIsFrosting}
+                />
+                <Label htmlFor="is-frosting" className="cursor-pointer">É uma Cobertura/Recheio?</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Marque esta opção se esta receita for um componente (ex: brigadeiro, creme) que você usará dentro de outras receitas maiores.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
             
             <div className="bg-muted/50 p-4 rounded-lg border">
@@ -261,7 +292,7 @@ export function RecipeBuilder({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Item (Massa)</TableHead>
+                      <TableHead>Item {isFrosting ? '' : '(Massa)'}</TableHead>
                       <TableHead className="text-center">Qtd</TableHead>
                       <TableHead className="text-right">Custo</TableHead>
                       <TableHead className="w-12 text-center">Ação</TableHead>
@@ -286,25 +317,27 @@ export function RecipeBuilder({
               </div>
             </div>
 
-            <div className="border-t pt-6 space-y-4">
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        id="has-frosting"
-                        checked={hasFrosting}
-                        onCheckedChange={setHasFrosting}
-                    />
-                    <Label htmlFor="has-frosting">Adicionar Cobertura?</Label>
-                </div>
+            {!isFrosting && (
+              <div className="border-t pt-6 space-y-4">
+                  <div className="flex items-center space-x-2">
+                      <Switch
+                          id="has-frosting"
+                          checked={hasFrosting}
+                          onCheckedChange={setHasFrosting}
+                      />
+                      <Label htmlFor="has-frosting" className="cursor-pointer font-semibold">Adicionar Cobertura/Recheio?</Label>
+                  </div>
 
-                {hasFrosting && (
-                    <div className='p-4 rounded-lg border bg-muted/20'>
-                        <label className="block text-sm font-medium text-foreground mb-1">Receita da Cobertura</label>
-                        <Select onValueChange={setSelectedFrostingId} value={selectedFrostingId}>
-                            <SelectTrigger><SelectValue placeholder="Selecione uma receita..." /></SelectTrigger>
-                            <SelectContent>
-                                {safeRecipes
-                                    .filter(r => r.id !== recipeToEdit?.id)
-                                    .map(recipe => {
+                  {hasFrosting && (
+                      <div className='p-4 rounded-lg border bg-muted/20'>
+                          <label className="block text-sm font-medium text-foreground mb-1">Selecione uma Cobertura já salva</label>
+                          {availableFrostings.length === 0 ? (
+                            <p className="text-xs text-muted-foreground italic">Nenhuma receita marcada como 'Cobertura' encontrada. Crie uma primeiro!</p>
+                          ) : (
+                            <Select onValueChange={setSelectedFrostingId} value={selectedFrostingId}>
+                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent>
+                                    {availableFrostings.map(recipe => {
                                       const { totalCost } = calculateRecipeCosts(recipe, safeIngredients, safeRecipes);
                                       return (
                                         <SelectItem key={recipe.id} value={recipe.id}>
@@ -312,24 +345,27 @@ export function RecipeBuilder({
                                         </SelectItem>
                                     );
                                     })}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
-                  <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Embalagem (R$)</label>
-                  <Input 
-                    type="text" 
-                    placeholder="R$ 0,00"
-                    value={packagingCost} 
-                    onChange={handlePackagingCostChange} 
-                  />
-                </div>
+                                </SelectContent>
+                            </Select>
+                          )}
+                      </div>
+                  )}
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-6">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
+                <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Embalagem (R$)</label>
+                <Input 
+                  type="text" 
+                  placeholder="R$ 0,00"
+                  value={packagingCost} 
+                  onChange={handlePackagingCostChange} 
+                />
               </div>
             </div>
           </CardContent>
@@ -341,10 +377,10 @@ export function RecipeBuilder({
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                  <span>Custo dos Ingredientes (Massa)</span>
+                  <span>Custo dos Ingredientes {isFrosting ? '' : '(Massa)'}</span>
                   <span className="font-medium">{formatCurrency(calculations.ingredientsCost)}</span>
               </div>
-              {hasFrosting && calculations.frostingCost > 0 && (
+              {!isFrosting && hasFrosting && calculations.frostingCost > 0 && (
                   <div className="flex justify-between">
                       <span>Custo da Cobertura</span>
                       <span className="font-medium">{formatCurrency(calculations.frostingCost)}</span>

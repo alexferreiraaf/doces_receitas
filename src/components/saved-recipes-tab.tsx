@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { formatCurrency, calculateRecipeCosts } from '@/lib/utils';
 import type { Recipe, Ingredient } from '@/lib/types';
 import { RecipeDetailModal } from './recipe-detail-modal';
-import { Pencil, Trash2, Copy } from 'lucide-react';
+import { Pencil, Trash2, Copy, ChefHat } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Badge } from './ui/badge';
 
 interface SavedRecipesTabProps {
   recipes: Recipe[];
@@ -61,15 +63,26 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
             return (
             <Card 
               key={recipe.id}
-              className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group"
+              className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group relative"
             >
               <div onClick={() => setSelectedRecipe(recipe)} className="flex-grow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <CardTitle className="font-headline text-lg">{recipe.name}</CardTitle>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(recipe.createdAt)}</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="font-headline text-lg">{recipe.name}</CardTitle>
+                        {recipe.isFrosting && (
+                          <Badge variant="secondary" className="bg-accent/10 text-accent border-accent/20 text-[10px] px-1.5 py-0">
+                            Cobertura
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{formatDate(recipe.createdAt)}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground pt-1">{recipe.items.length} ingredientes</p>
+                  <p className="text-sm text-muted-foreground pt-1 flex items-center gap-1">
+                    <ChefHat className="w-3 h-3" /> {recipe.items.length} ingredientes
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-grow flex flex-col justify-end">
                   <div className="flex justify-between items-center border-t pt-4">
@@ -87,15 +100,15 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
                <CardContent className="pt-0">
                  <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="outline" size="sm" className="flex-1" onClick={(e) => handleEditClick(e, recipe)}>
-                      <Pencil/> Editar
+                      <Pencil className="w-4 h-4 mr-2" /> Editar
                     </Button>
                     <Button variant="outline" size="icon" className="h-9 w-9" title="Duplicar" onClick={(e) => handleDuplicateClick(e, recipe)}>
-                      <Copy/>
+                      <Copy className="w-4 h-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                          <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50" onClick={(e) => e.stopPropagation()}>
-                          <Trash2/>
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
