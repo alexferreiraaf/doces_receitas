@@ -12,10 +12,12 @@ import { useState } from 'react';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { AuthForm } from '@/components/auth-form';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState('create');
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
@@ -116,6 +118,27 @@ export default function Home() {
     setActiveTab('create');
   };
 
+  const handleDuplicateRecipe = (recipe: Recipe) => {
+    if (!user) return;
+    const id = doc(collection(firestore, 'users', user.uid, 'recipes')).id;
+    const duplicatedRecipe = {
+      name: `${recipe.name} (cópia)`,
+      items: recipe.items.map(({ id: _, ...item }) => ({
+        ...item,
+        id: Math.random().toString(36).substr(2, 9), // Generate a unique ID for the item copy
+      })),
+      variableCostsPercentage: recipe.variableCostsPercentage,
+      packagingCost: recipe.packagingCost,
+      profitMargin: recipe.profitMargin,
+      frostingId: recipe.frostingId || null,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    const recipeRef = doc(firestore, 'users', user.uid, 'recipes', id);
+    setDocumentNonBlocking(recipeRef, duplicatedRecipe, { merge: true });
+    toast({ title: 'Sucesso!', description: `Receita "${recipe.name}" duplicada.` });
+  };
+
   const handleRecipeSaved = () => {
     setRecipeToEdit(null); // Clear recipe to edit after saving
     setActiveTab('saved');
@@ -174,6 +197,7 @@ export default function Home() {
             ingredients={ingredients}
             onDeleteRecipe={handleDeleteRecipe}
             onEditRecipe={handleEditRecipe}
+            onDuplicateRecipe={handleDuplicateRecipe}
           />
         </TabsContent>
       </Tabs>

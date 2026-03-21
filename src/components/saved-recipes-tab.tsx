@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { formatCurrency, calculateRecipeCosts } from '@/lib/utils';
 import type { Recipe, Ingredient } from '@/lib/types';
 import { RecipeDetailModal } from './recipe-detail-modal';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Copy } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -16,9 +16,10 @@ interface SavedRecipesTabProps {
   ingredients: Ingredient[];
   onDeleteRecipe: (id: string) => void;
   onEditRecipe: (recipe: Recipe) => void;
+  onDuplicateRecipe: (recipe: Recipe) => void;
 }
 
-export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRecipe }: SavedRecipesTabProps) {
+export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRecipe, onDuplicateRecipe }: SavedRecipesTabProps) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -29,6 +30,11 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
   const handleEditClick = (e: React.MouseEvent, recipe: Recipe) => {
     e.stopPropagation();
     onEditRecipe(recipe);
+  }
+
+  const handleDuplicateClick = (e: React.MouseEvent, recipe: Recipe) => {
+    e.stopPropagation();
+    onDuplicateRecipe(recipe);
   }
 
   const formatDate = (dateString: string) => {
@@ -80,12 +86,15 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
               </div>
                <CardContent className="pt-0">
                  <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="outline" size="sm" className="w-full" onClick={(e) => handleEditClick(e, recipe)}>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={(e) => handleEditClick(e, recipe)}>
                       <Pencil/> Editar
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-9 w-9" title="Duplicar" onClick={(e) => handleDuplicateClick(e, recipe)}>
+                      <Copy/>
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                         <Button variant="outline" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50" onClick={(e) => e.stopPropagation()}>
+                         <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50" onClick={(e) => e.stopPropagation()}>
                           <Trash2/>
                         </Button>
                       </AlertDialogTrigger>
