@@ -2,10 +2,14 @@
   "name": "Doce Estimativa",
   "short_name": "DoceEst",
   "description": "Gestão Profissional de Custos e Receitas",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#FCE4EC",
   "theme_color": "#db2777",
+  "scope": "/",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
