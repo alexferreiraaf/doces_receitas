@@ -135,6 +135,25 @@ service cloud.firestore {
         allow update: if isExistingOwner(userId) && hasImmutableId();
         allow delete: if isExistingOwner(userId);
       }
+
+      // -------------------------------------------------------------------------
+      // User Categories Collection
+      // -------------------------------------------------------------------------
+      /**
+       * @description Secures the 'categories' subcollection for a user.
+       *              Only the owner of this data tree can access these documents.
+       * @path /users/{userId}/categories/{categoryId}
+       * @allow (list) An authenticated user listing their own categories.
+       * @deny (create) A user trying to create a category under another user's path.
+       * @principle Enforces strict data ownership within a user's private data tree.
+       */
+      match /categories/{categoryId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasMatchingIdOnCreate(categoryId);
+        allow update: if isExistingOwner(userId) && hasImmutableId();
+        allow delete: if isExistingOwner(userId);
+      }
     }
   }
 }

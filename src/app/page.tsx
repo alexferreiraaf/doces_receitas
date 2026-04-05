@@ -4,13 +4,14 @@
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem, Category } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from '@/components/app-header';
 import { CreateRecipeTab } from '@/components/create-recipe-tab';
 import { SavedRecipesTab } from '@/components/saved-recipes-tab';
 import { useState } from 'react';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useEffect } from 'react';
 import { AuthForm } from '@/components/auth-form';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -32,9 +33,30 @@ export default function Home() {
     user ? collection(firestore, 'users', user.uid, 'recipes') : null,
     [user, firestore]
   );
+  const categoriesQuery = useMemoFirebase(() => 
+    user ? collection(firestore, 'users', user.uid, 'categories') : null,
+    [user, firestore]
+  );
 
-  const { data: ingredients = [], isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
-  const { data: recipes = [], isLoading: recipesLoading } = useCollection<Recipe>(recipesQuery);
+  const { data: ingredientsData, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
+  const { data: recipesData, isLoading: recipesLoading } = useCollection<Recipe>(recipesQuery);
+  const { data: categoriesData, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
+
+  const ingredients = ingredientsData || [];
+  const recipes = recipesData || [];
+  const categories = categoriesData || [];
+
+  // Initialize default categories for new users
+  useEffect(() => {
+    if (user && !categoriesLoading && categories.length === 0) {
+      const defaultCategories = ['Vulcão', 'Simples', 'Piscina', 'Doces'];
+      defaultCategories.forEach(catName => {
+        const id = doc(collection(firestore, 'users', user.uid, 'categories')).id;
+        const catRef = doc(firestore, 'users', user.uid, 'categories', id);
+        setDocumentNonBlocking(catRef, { id, name: catName }, { merge: true });
+      });
+    }
+  }, [user, categoriesLoading, categories.length, firestore]);
 
   const handleSaveIngredient = (ingredientData: Omit<Ingredient, 'id'>) => {
     if (!user) return;
@@ -84,6 +106,7 @@ export default function Home() {
       packagingCost: recipeData.packagingCost,
       profitMargin: recipeData.profitMargin,
       isFrosting: recipeData.isFrosting,
+      category: recipeData.category,
       frostingId: recipeData.frostingId || null,
     };
 
@@ -133,12 +156,26 @@ export default function Home() {
       profitMargin: recipe.profitMargin,
       isFrosting: recipe.isFrosting || false,
       frostingId: recipe.frostingId || null,
+      category: recipe.category || 'Simples',
       id,
       createdAt: new Date().toISOString()
     };
     const recipeRef = doc(firestore, 'users', user.uid, 'recipes', id);
     setDocumentNonBlocking(recipeRef, duplicatedRecipe, { merge: true });
     toast({ title: 'Sucesso!', description: `Receita "${recipe.name}" duplicada.` });
+  };
+
+  const handleSaveCategory = (name: string) => {
+    if (!user) return;
+    const id = doc(collection(firestore, 'users', user.uid, 'categories')).id;
+    const catRef = doc(firestore, 'users', user.uid, 'categories', id);
+    setDocumentNonBlocking(catRef, { id, name }, { merge: true });
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    if (!user) return;
+    const catRef = doc(firestore, 'users', user.uid, 'categories', id);
+    deleteDocumentNonBlocking(catRef);
   };
 
   const handleRecipeSaved = () => {
@@ -151,7 +188,7 @@ export default function Home() {
   }
 
   // Loading state for auth and initial data fetch
-  if (isUserLoading || (user && (ingredientsLoading || recipesLoading))) {
+  if (isUserLoading || (user && (ingredientsLoading || recipesLoading || categoriesLoading))) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -170,7 +207,11 @@ export default function Home() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
-      <AppHeader />
+      <AppHeader 
+        categories={categories} 
+        onSaveCategory={handleSaveCategory} 
+        onDeleteCategory={handleDeleteCategory} 
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto mb-8">
@@ -191,6 +232,7 @@ export default function Home() {
             ingredientToEdit={ingredientToEdit}
             onEditIngredient={handleEditIngredient}
             onClearIngredientEdit={handleClearIngredientEdit}
+            categories={categories}
           />
         </TabsContent>
         <TabsContent value="saved">

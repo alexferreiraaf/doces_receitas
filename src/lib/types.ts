@@ -20,6 +20,7 @@ export type RecipeItem = {
 export type Recipe = {
   id: string;
   name: string;
+  category: string;
   createdAt: string;
   items: RecipeItem[];
   variableCostsPercentage: number;
@@ -44,4 +45,9 @@ export type SuggestedIngredient = {
 export type SuggestedRecipe = {
   recipeName: string;
   ingredients: SuggestedIngredient[];
+};
+
+export type Category = {
+  id: string;
+  name: string;
 };

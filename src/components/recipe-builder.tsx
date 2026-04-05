@@ -12,13 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency, calculateRecipeCosts } from '@/lib/utils';
-import type { Ingredient, Recipe, RecipeItem } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem, Category } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RecipeBuilderProps {
   ingredients: Ingredient[] | null;
   recipes: Recipe[] | null;
+  categories: Category[] | null;
   onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
   recipeToEdit: Recipe | null;
   onRecipeSaved: () => void;
@@ -28,6 +29,7 @@ interface RecipeBuilderProps {
 export function RecipeBuilder({ 
   ingredients, 
   recipes,
+  categories,
   onSaveRecipe, 
   recipeToEdit, 
   onRecipeSaved, 
@@ -39,6 +41,7 @@ export function RecipeBuilder({
   const [packagingCost, setPackagingCost] = useState('');
   const [profitMargin, setProfitMargin] = useState(100);
   const [isFrosting, setIsFrosting] = useState(false);
+  const [category, setCategory] = useState('Simples');
   const { toast } = useToast();
 
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
@@ -76,6 +79,7 @@ export function RecipeBuilder({
       setPackagingCost(formatCurrency(recipeToEdit.packagingCost));
       setProfitMargin(recipeToEdit.profitMargin);
       setIsFrosting(recipeToEdit.isFrosting || false);
+      setCategory(recipeToEdit.category || (recipeToEdit.isFrosting ? 'Cobertura' : 'Simples'));
       setHasFrosting(!!recipeToEdit.frostingId);
       setSelectedFrostingId(recipeToEdit.frostingId || '');
     } else {
@@ -172,6 +176,7 @@ export function RecipeBuilder({
     setDisplayUnit('original');
     setHasFrosting(false);
     setSelectedFrostingId('');
+    setCategory('Simples');
   }
 
   const handleCancelEdit = () => {
@@ -196,6 +201,7 @@ export function RecipeBuilder({
       packagingCost: parseCurrency(packagingCost),
       profitMargin,
       isFrosting,
+      category,
       frostingId: hasFrosting ? selectedFrostingId : null,
     };
 
@@ -236,7 +242,10 @@ export function RecipeBuilder({
                 <Switch
                   id="is-frosting"
                   checked={isFrosting}
-                  onCheckedChange={setIsFrosting}
+                  onCheckedChange={(checked) => {
+                    setIsFrosting(checked);
+                    if (checked) setCategory('Cobertura');
+                  }}
                 />
                 <Label htmlFor="is-frosting" className="cursor-pointer">É uma Cobertura/Recheio?</Label>
                 <TooltipProvider>
@@ -249,6 +258,31 @@ export function RecipeBuilder({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </div>
+
+              <div className="flex-shrink-0 w-full md:w-48">
+                <label className="block text-sm font-medium text-foreground mb-1">Categoria</label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories && categories.length > 0 ? (
+                      categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                      ))
+                    ) : (
+                      <>
+                        <SelectItem value="Simples">Simples</SelectItem>
+                        <SelectItem value="Vulcão">Vulcão</SelectItem>
+                        <SelectItem value="Piscina">Piscina</SelectItem>
+                        <SelectItem value="Doces">Doces</SelectItem>
+                        <SelectItem value="Cobertura">Cobertura</SelectItem>
+                        <SelectItem value="Outros">Outros</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             

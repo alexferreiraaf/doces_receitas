@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import type { Ingredient, Recipe } from '@/lib/types';
+import type { Ingredient, Recipe, Category } from '@/lib/types';
 import { IngredientForm } from './ingredient-form';
 import { IngredientList } from './ingredient-list';
 import { RecipeBuilder } from './recipe-builder';
@@ -10,6 +10,7 @@ import { RecipeBuilder } from './recipe-builder';
 interface CreateRecipeTabProps {
   ingredients: Ingredient[] | null;
   recipes: Recipe[] | null;
+  categories: Category[] | null;
   onSaveIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
   onDeleteIngredient: (id: string) => void;
   onSaveRecipe: (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => void;
@@ -24,6 +25,7 @@ interface CreateRecipeTabProps {
 export function CreateRecipeTab({ 
   ingredients, 
   recipes,
+  categories,
   onSaveIngredient, 
   onDeleteIngredient,
   onSaveRecipe,
@@ -53,6 +55,7 @@ export function CreateRecipeTab({
         <RecipeBuilder 
           ingredients={ingredients}
           recipes={recipes}
+          categories={categories}
           onSaveRecipe={onSaveRecipe}
           recipeToEdit={recipeToEdit}
           onRecipeSaved={onRecipeSaved}
