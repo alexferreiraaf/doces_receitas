@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency, CONVERSION_RATES, UNIT_LABELS, parseCurrency, calculateRecipeCosts } from '@/lib/utils';
-import type { Ingredient, Recipe, RecipeItem, Category } from '@/lib/types';
+import type { Ingredient, Recipe, RecipeItem, Category, RecipeFrosting } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -49,7 +49,9 @@ export function RecipeBuilder({
   const [displayUnit, setDisplayUnit] = useState<'original' | 'xicara' | 'colher-sopa' | 'colher-cha'>('original');
 
   const [hasFrosting, setHasFrosting] = useState(false);
-  const [selectedFrostingId, setSelectedFrostingId] = useState<string>('');
+  const [selectedFrostings, setSelectedFrostings] = useState<RecipeFrosting[]>([]);
+  const [frostingToAddId, setFrostingToAddId] = useState<string>('');
+  const [frostingQuantityToAdd, setFrostingQuantityToAdd] = useState<string>('1');
 
   const isEditing = !!recipeToEdit;
   const safeIngredients = ingredients || [];
@@ -80,8 +82,18 @@ export function RecipeBuilder({
       setProfitMargin(recipeToEdit.profitMargin);
       setIsFrosting(recipeToEdit.isFrosting || false);
       setCategory(recipeToEdit.category || (recipeToEdit.isFrosting ? 'Cobertura' : 'Simples'));
-      setHasFrosting(!!recipeToEdit.frostingId);
-      setSelectedFrostingId(recipeToEdit.frostingId || '');
+      
+      let initialFrostings = recipeToEdit.frostings ? [...recipeToEdit.frostings] : [];
+      if (recipeToEdit.frostingId && initialFrostings.length === 0) {
+        const legacyFrosting = safeRecipes.find(r => r.id === recipeToEdit.frostingId);
+        initialFrostings.push({ 
+           id: recipeToEdit.frostingId, 
+           quantity: 1, 
+           name: legacyFrosting?.name || "Cobertura" 
+        });
+      }
+      setSelectedFrostings(initialFrostings);
+      setHasFrosting(initialFrostings.length > 0 || !!recipeToEdit.frostingId);
     } else {
       resetForm();
     }
@@ -149,11 +161,14 @@ export function RecipeBuilder({
     const ingredientsCost = items.reduce((acc, item) => acc + (item.cost || 0), 0);
     
     let frostingCost = 0;
-    const frostingRecipe = hasFrosting ? safeRecipes.find(r => r.id === selectedFrostingId) : null;
-
-    if (frostingRecipe) {
-        const calculatedFrosting = calculateRecipeCosts(frostingRecipe, safeIngredients, safeRecipes);
-        frostingCost = calculatedFrosting.totalCost;
+    if (hasFrosting && selectedFrostings.length > 0) {
+      selectedFrostings.forEach(f => {
+        const recipe = safeRecipes.find(r => r.id === f.id);
+        if (recipe) {
+          const calculatedFrosting = calculateRecipeCosts(recipe, safeIngredients, safeRecipes);
+          frostingCost += calculatedFrosting.totalCost * f.quantity;
+        }
+      });
     }
 
     const totalBaseCost = ingredientsCost + frostingCost;
@@ -162,7 +177,7 @@ export function RecipeBuilder({
     const salePrice = totalCost * (1 + profitMargin / 100);
 
     return { ingredientsCost, frostingCost, totalCost, salePrice };
-  }, [items, variableCosts, packagingCost, profitMargin, hasFrosting, selectedFrostingId, safeRecipes, safeIngredients]);
+  }, [items, variableCosts, packagingCost, profitMargin, hasFrosting, selectedFrostings, safeRecipes, safeIngredients]);
 
   const resetForm = () => {
     setRecipeName('');
@@ -175,7 +190,9 @@ export function RecipeBuilder({
     setDisplayQuantity('');
     setDisplayUnit('original');
     setHasFrosting(false);
-    setSelectedFrostingId('');
+    setSelectedFrostings([]);
+    setFrostingToAddId('');
+    setFrostingQuantityToAdd('1');
     setCategory('Simples');
   }
 
@@ -202,7 +219,8 @@ export function RecipeBuilder({
       profitMargin,
       isFrosting,
       category,
-      frostingId: hasFrosting ? selectedFrostingId : null,
+      frostingId: hasFrosting && selectedFrostings.length > 0 ? selectedFrostings[0].id : null,
+      frostings: hasFrosting ? selectedFrostings : [],
     };
 
     onSaveRecipe(recipeData as Omit<Recipe, 'id' | 'createdAt'>);
@@ -210,6 +228,36 @@ export function RecipeBuilder({
     
     resetForm();
     onRecipeSaved();
+  };
+
+  const handleAddFrosting = () => {
+    if (!frostingToAddId) {
+      toast({ title: 'Erro', description: 'Selecione uma cobertura.', variant: 'destructive' });
+      return;
+    }
+    const quantity = parseFloat(frostingQuantityToAdd);
+    if (isNaN(quantity) || quantity <= 0) {
+      toast({ title: 'Erro', description: 'Digite uma quantidade válida (ex: 0.5, 1, 2).', variant: 'destructive' });
+      return;
+    }
+    const frostingRecipe = safeRecipes.find(r => r.id === frostingToAddId);
+    if (!frostingRecipe) return;
+
+    setSelectedFrostings(prev => {
+      const existingStr = prev.find(p => p.id === frostingToAddId);
+      if (existingStr) {
+         toast({ title: 'Aviso', description: 'Esta cobertura já foi adicionada.' });
+         return prev;
+      }
+      return [...prev, { id: frostingToAddId, quantity, name: frostingRecipe.name }];
+    });
+    
+    setFrostingToAddId('');
+    setFrostingQuantityToAdd('1');
+  };
+
+  const handleRemoveFrosting = (id: string) => {
+    setSelectedFrostings(prev => prev.filter(f => f.id !== id));
   };
   
   return (
@@ -363,24 +411,60 @@ export function RecipeBuilder({
                   </div>
 
                   {hasFrosting && (
-                      <div className='p-4 rounded-lg border bg-muted/20'>
-                          <label className="block text-sm font-medium text-foreground mb-1">Selecione uma Cobertura já salva</label>
+                      <div className='p-4 rounded-lg border bg-muted/20 space-y-4'>
+                          <label className="block text-sm font-medium text-foreground mb-1">Adicione as Coberturas e suas porções</label>
                           {availableFrostings.length === 0 ? (
                             <p className="text-xs text-muted-foreground italic">Nenhuma receita marcada como 'Cobertura' encontrada. Crie uma primeiro!</p>
                           ) : (
-                            <Select onValueChange={setSelectedFrostingId} value={selectedFrostingId}>
-                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                <SelectContent>
-                                    {availableFrostings.map(recipe => {
-                                      const { totalCost } = calculateRecipeCosts(recipe, safeIngredients, safeRecipes);
-                                      return (
-                                        <SelectItem key={recipe.id} value={recipe.id}>
-                                            {recipe.name} ({formatCurrency(totalCost)})
-                                        </SelectItem>
-                                    );
-                                    })}
-                                </SelectContent>
-                            </Select>
+                            <div className="space-y-4">
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <Select onValueChange={setFrostingToAddId} value={frostingToAddId}>
+                                    <SelectTrigger className="flex-grow"><SelectValue placeholder="Selecione a cobertura..." /></SelectTrigger>
+                                    <SelectContent>
+                                        {availableFrostings.map(recipe => {
+                                          const { totalCost } = calculateRecipeCosts(recipe, safeIngredients, safeRecipes);
+                                          return (
+                                            <SelectItem key={recipe.id} value={recipe.id}>
+                                                {recipe.name} ({formatCurrency(totalCost)})
+                                            </SelectItem>
+                                          );
+                                        })}
+                                    </SelectContent>
+                                </Select>
+                                <Input 
+                                  type="number" 
+                                  step="0.1" 
+                                  placeholder="Qtd (ex: 0.5)" 
+                                  className="w-full sm:w-32 shrink-0" 
+                                  value={frostingQuantityToAdd} 
+                                  onChange={e => setFrostingQuantityToAdd(e.target.value)} 
+                                />
+                                <Button type="button" onClick={handleAddFrosting} className="shrink-0"><Plus className="w-4 h-4 mr-1"/> Add</Button>
+                              </div>
+                              
+                              {selectedFrostings.length > 0 && (
+                                <div className="space-y-2 mt-4">
+                                  {selectedFrostings.map(f => {
+                                    const r = safeRecipes.find(recipe => recipe.id === f.id);
+                                    let cost = 0;
+                                    if (r) {
+                                      cost = calculateRecipeCosts(r, safeIngredients, safeRecipes).totalCost * f.quantity;
+                                    }
+                                    return (
+                                      <div key={f.id} className="flex justify-between items-center bg-background p-3 rounded-md border shadow-sm text-sm">
+                                        <span><span className="font-semibold text-primary">{f.quantity}x</span> {f.name}</span>
+                                        <div className="flex items-center gap-4">
+                                          <span className="font-semibold">{formatCurrency(cost)}</span>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveFrosting(f.id)}>
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           )}
                       </div>
                   )}

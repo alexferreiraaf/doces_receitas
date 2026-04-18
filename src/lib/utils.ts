@@ -50,11 +50,11 @@ export function calculateRecipeCosts(
   const recipeMap = new Map(allRecipes.map(r => [r.id, r]));
 
   // Memoization map for the recursive calculation within a single run
-  const memo = new Map<string, { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null }>();
+  const memo = new Map<string, { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null, frostingsDetails?: { name: string; cost: number; quantity: number }[] }>();
   // Visited set to prevent infinite recursion
   const visited = new Set<string>();
 
-  function calculate(recipeToCalc: Recipe): { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null } {
+  function calculate(recipeToCalc: Recipe): { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null, frostingsDetails?: { name: string; cost: number; quantity: number }[] } {
     if (memo.has(recipeToCalc.id)) {
       return memo.get(recipeToCalc.id)!;
     }
@@ -75,14 +75,34 @@ export function calculateRecipeCosts(
 
     let frostingCost = 0;
     let frostingName: string | null = null;
-    if (recipeToCalc.frostingId && recipeToCalc.frostingId !== recipeToCalc.id) {
+    let frostingsDetails: { name: string; cost: number; quantity: number }[] = [];
+
+    // Fallback for legacy recipes with single frostingId
+    if (recipeToCalc.frostingId && (!recipeToCalc.frostings || recipeToCalc.frostings.length === 0) && recipeToCalc.frostingId !== recipeToCalc.id) {
       const frostingRecipe = recipeMap.get(recipeToCalc.frostingId);
       if (frostingRecipe) {
         // Recursive call
         const nestedCosts = calculate(frostingRecipe);
         frostingCost = nestedCosts.totalCost;
         frostingName = frostingRecipe.name;
+        frostingsDetails.push({ name: frostingRecipe.name, cost: nestedCosts.totalCost, quantity: 1 });
       }
+    }
+
+    // Modern multi-frosting logic
+    if (recipeToCalc.frostings && recipeToCalc.frostings.length > 0) {
+      for (const f of recipeToCalc.frostings) {
+        if (f.id !== recipeToCalc.id) {
+          const frostingRecipe = recipeMap.get(f.id);
+          if (frostingRecipe) {
+            const nestedCosts = calculate(frostingRecipe);
+            const costForQuantity = nestedCosts.totalCost * f.quantity;
+            frostingCost += costForQuantity;
+            frostingsDetails.push({ name: frostingRecipe.name, cost: costForQuantity, quantity: f.quantity });
+          }
+        }
+      }
+      frostingName = frostingsDetails.map(f => `${f.quantity}x ${f.name}`).join(', ');
     }
     
     const packagingCost = recipeToCalc.packagingCost || 0;
@@ -94,7 +114,7 @@ export function calculateRecipeCosts(
     const totalCost = totalIngredientsCost + variableCostValue + packagingCost;
     const salePrice = totalCost * (1 + profitMargin / 100);
 
-    const result = { totalCost, salePrice, ingredientsCost, frostingCost, frostingName };
+    const result = { totalCost, salePrice, ingredientsCost, frostingCost, frostingName, frostingsDetails };
     memo.set(recipeToCalc.id, result);
     visited.delete(recipeToCalc.id);
     return result;

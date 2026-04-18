@@ -29,7 +29,7 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
 
   if (!recipe) return null;
 
-  const { totalCost, salePrice, ingredientsCost, frostingCost, frostingName } = calculateRecipeCosts(recipe, ingredients, recipes);
+  const { totalCost, salePrice, ingredientsCost, frostingCost, frostingName, frostingsDetails } = calculateRecipeCosts(recipe, ingredients, recipes);
 
   const itemsWithCost = recipe.items.map(item => {
     const ingredient = ingredients.find(i => i.id === item.ingredientId);
@@ -129,7 +129,13 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
   };
 
   const fallbackShareText = () => {
-    const frostingPart = frostingCost > 0 ? `\nCobertura: ${frostingName} (${formatCurrency(frostingCost)})` : '';
+    let frostingPart = '';
+    if (frostingsDetails && frostingsDetails.length > 0) {
+      frostingPart = '\n\nCoberturas:\n' + frostingsDetails.map(f => `- ${f.quantity}x ${f.name} (${formatCurrency(f.cost)})`).join('\n');
+    } else if (frostingCost > 0) {
+      frostingPart = `\n\nCobertura: ${frostingName} (${formatCurrency(frostingCost)})`;
+    }
+
     const shareableText = `
 Receita: ${recipe.name}
 
@@ -196,12 +202,19 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
                   <span>Custo da Massa</span>
                   <span className="font-medium">{formatCurrency(ingredientsCost)}</span>
                 </div>
-                {frostingCost > 0 && (
+                {frostingsDetails && frostingsDetails.length > 0 ? (
+                  frostingsDetails.map((f, i) => (
+                    <div key={i} className="flex justify-between">
+                      <span>Cobertura ({f.quantity}x {f.name})</span>
+                      <span className="font-medium">{formatCurrency(f.cost)}</span>
+                    </div>
+                  ))
+                ) : frostingCost > 0 ? (
                    <div className="flex justify-between">
                       <span>Cobertura ({frostingName || '...'})</span>
                       <span className="font-medium">{formatCurrency(frostingCost)}</span>
                   </div>
-                )}
+                ) : null}
                 <div className="flex justify-between">
                   <span>Custos Variáveis ({recipe.variableCostsPercentage}%)</span>
                   <span className="font-medium">{formatCurrency(variableCostValue)}</span>

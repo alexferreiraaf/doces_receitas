@@ -17,6 +17,12 @@ export type RecipeItem = {
   cost?: number; // Calculated at runtime
 };
 
+export type RecipeFrosting = {
+  id: string;
+  quantity: number;
+  name?: string;
+};
+
 export type Recipe = {
   id: string;
   name: string;
@@ -28,12 +34,14 @@ export type Recipe = {
   profitMargin: number;
   isFrosting: boolean; // Flag to identify if the recipe is a base frosting/filling
   frostingId?: string | null;
+  frostings?: RecipeFrosting[];
 
   // Calculated at runtime
   totalCost?: number;
   salePrice?: number;
   frostingName?: string | null;
   frostingCost?: number;
+  frostingsDetails?: { name: string; cost: number; quantity: number }[];
 };
 
 export type SuggestedIngredient = {
