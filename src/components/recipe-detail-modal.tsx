@@ -234,7 +234,7 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
             <div className="bg-green-50 border border-green-200 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="text-center sm:text-left">
                 <p className="text-xs text-green-700 font-bold uppercase">Preço de Venda Sugerido</p>
-                <p className="text-xs text-green-600">(Margem de {recipe.profitMargin}%)</p>
+                <p className="text-xs text-green-600">({recipe.pricingMethod === 'margin' ? 'Margem Real' : 'Markup'} de {recipe.profitMargin}%)</p>
               </div>
               <p className="text-2xl font-bold text-green-700">{formatCurrency(salePrice)}</p>
             </div>

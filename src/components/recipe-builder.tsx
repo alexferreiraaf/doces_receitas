@@ -40,6 +40,7 @@ export function RecipeBuilder({
   const [variableCosts, setVariableCosts] = useState(10);
   const [packagingCost, setPackagingCost] = useState('');
   const [profitMargin, setProfitMargin] = useState(100);
+  const [pricingMethod, setPricingMethod] = useState<'markup' | 'margin'>('markup');
   const [isFrosting, setIsFrosting] = useState(false);
   const [category, setCategory] = useState('Simples');
   const { toast } = useToast();
@@ -80,6 +81,7 @@ export function RecipeBuilder({
       setVariableCosts(recipeToEdit.variableCostsPercentage);
       setPackagingCost(formatCurrency(recipeToEdit.packagingCost));
       setProfitMargin(recipeToEdit.profitMargin);
+      setPricingMethod(recipeToEdit.pricingMethod || 'markup');
       setIsFrosting(recipeToEdit.isFrosting || false);
       setCategory(recipeToEdit.category || (recipeToEdit.isFrosting ? 'Cobertura' : 'Simples'));
       
@@ -174,10 +176,16 @@ export function RecipeBuilder({
     const totalBaseCost = ingredientsCost + frostingCost;
     const variableCostValue = totalBaseCost * (variableCosts / 100);
     const totalCost = totalBaseCost + variableCostValue + numericPackagingCost;
-    const salePrice = totalCost * (1 + profitMargin / 100);
+
+    let salePrice = 0;
+    if (pricingMethod === 'margin') {
+      salePrice = profitMargin >= 100 ? totalCost * 10 : totalCost / (1 - (profitMargin / 100));
+    } else {
+      salePrice = totalCost * (1 + (profitMargin / 100));
+    }
 
     return { ingredientsCost, frostingCost, totalCost, salePrice };
-  }, [items, variableCosts, packagingCost, profitMargin, hasFrosting, selectedFrostings, safeRecipes, safeIngredients]);
+  }, [items, variableCosts, packagingCost, profitMargin, pricingMethod, hasFrosting, selectedFrostings, safeRecipes, safeIngredients]);
 
   const resetForm = () => {
     setRecipeName('');
@@ -185,6 +193,7 @@ export function RecipeBuilder({
     setVariableCosts(10);
     setPackagingCost('');
     setProfitMargin(100);
+    setPricingMethod('markup');
     setIsFrosting(false);
     setSelectedIngredientId('');
     setDisplayQuantity('');
@@ -217,6 +226,7 @@ export function RecipeBuilder({
       variableCostsPercentage: variableCosts,
       packagingCost: parseCurrency(packagingCost),
       profitMargin,
+      pricingMethod,
       isFrosting,
       category,
       frostingId: hasFrosting && selectedFrostings.length > 0 ? selectedFrostings[0].id : null,
@@ -537,12 +547,27 @@ export function RecipeBuilder({
                 <p className="text-primary-foreground/70 text-xs font-bold uppercase">Sugestão de Venda</p>
                 <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.salePrice)}</p>
               </div>
-              <div className='max-w-40 mx-auto'>
-                <p className="text-primary-foreground/70 text-xs font-bold uppercase mb-1">Margem Lucro (%)</p>
+              <div className='max-w-40 mx-auto flex flex-col gap-2'>
+                <Select value={pricingMethod} onValueChange={(v: 'markup' | 'margin') => {
+                  setPricingMethod(v);
+                  if (v === 'margin' && profitMargin >= 100) setProfitMargin(99);
+                }}>
+                  <SelectTrigger className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground h-8 text-xs font-bold uppercase">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="markup">Markup (%)</SelectItem>
+                    <SelectItem value="margin">Margem Real (%)</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Input 
                   type="number" 
                   value={profitMargin} 
-                  onChange={e => setProfitMargin(Number(e.target.value) || 0)}
+                  onChange={e => {
+                    let val = Number(e.target.value) || 0;
+                    if (pricingMethod === 'margin' && val >= 100) val = 99;
+                    setProfitMargin(val);
+                  }}
                   className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-xl font-bold h-12"
                 />
               </div>
