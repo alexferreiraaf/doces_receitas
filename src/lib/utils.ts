@@ -109,19 +109,23 @@ export function calculateRecipeCosts(
     const variableCostsPercentage = recipeToCalc.variableCostsPercentage || 0;
     const profitMargin = recipeToCalc.profitMargin || 0;
     const pricingMethod = recipeToCalc.pricingMethod || 'markup';
+    const fixedSalePrice = recipeToCalc.fixedSalePrice || 0;
 
     const totalIngredientsCost = ingredientsCost + frostingCost;
     const variableCostValue = totalIngredientsCost * (variableCostsPercentage / 100);
     const totalCost = totalIngredientsCost + variableCostValue + packagingCost;
     
-    let salePrice = 0;
+    let suggestedSalePrice = 0;
     if (pricingMethod === 'margin') {
-      salePrice = profitMargin >= 100 ? totalCost * 10 : totalCost / (1 - (profitMargin / 100));
+      suggestedSalePrice = profitMargin >= 100 ? totalCost * 10 : totalCost / (1 - (profitMargin / 100));
     } else {
-      salePrice = totalCost * (1 + (profitMargin / 100));
+      suggestedSalePrice = totalCost * (1 + (profitMargin / 100));
     }
 
-    const result = { totalCost, salePrice, ingredientsCost, frostingCost, frostingName, frostingsDetails };
+    const salePrice = fixedSalePrice > 0 ? fixedSalePrice : suggestedSalePrice;
+    const profitValue = salePrice > 0 ? salePrice - totalCost : 0;
+
+    const result = { totalCost, suggestedSalePrice, salePrice, profitValue, ingredientsCost, frostingCost, frostingName, frostingsDetails };
     memo.set(recipeToCalc.id, result);
     visited.delete(recipeToCalc.id);
     return result;

@@ -40,7 +40,8 @@ export function RecipeBuilder({
   const [variableCosts, setVariableCosts] = useState(10);
   const [packagingCost, setPackagingCost] = useState('');
   const [profitMargin, setProfitMargin] = useState(100);
-  const [pricingMethod, setPricingMethod] = useState<'markup' | 'margin'>('markup');
+  const [fixedSalePrice, setFixedSalePrice] = useState('');
+  const [pricingMethod, setPricingMethod] = useState<'markup' | 'margin' | 'fixed'>('markup');
   const [isFrosting, setIsFrosting] = useState(false);
   const [category, setCategory] = useState('Simples');
   const { toast } = useToast();
@@ -81,6 +82,7 @@ export function RecipeBuilder({
       setVariableCosts(recipeToEdit.variableCostsPercentage);
       setPackagingCost(formatCurrency(recipeToEdit.packagingCost));
       setProfitMargin(recipeToEdit.profitMargin);
+      setFixedSalePrice(recipeToEdit.fixedSalePrice ? formatCurrency(recipeToEdit.fixedSalePrice) : '');
       setPricingMethod(recipeToEdit.pricingMethod || 'markup');
       setIsFrosting(recipeToEdit.isFrosting || false);
       setCategory(recipeToEdit.category || (recipeToEdit.isFrosting ? 'Cobertura' : 'Simples'));
@@ -109,6 +111,16 @@ export function RecipeBuilder({
     }
     const numberValue = parseInt(value, 10) / 100;
     setPackagingCost(formatCurrency(numberValue));
+  };
+
+  const handleFixedSalePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value === '') {
+      setFixedSalePrice('');
+      return;
+    }
+    const numberValue = parseInt(value, 10) / 100;
+    setFixedSalePrice(formatCurrency(numberValue));
   };
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -177,15 +189,20 @@ export function RecipeBuilder({
     const variableCostValue = totalBaseCost * (variableCosts / 100);
     const totalCost = totalBaseCost + variableCostValue + numericPackagingCost;
 
-    let salePrice = 0;
+    let suggestedSalePrice = 0;
     if (pricingMethod === 'margin') {
-      salePrice = profitMargin >= 100 ? totalCost * 10 : totalCost / (1 - (profitMargin / 100));
+      suggestedSalePrice = profitMargin >= 100 ? totalCost * 10 : totalCost / (1 - (profitMargin / 100));
     } else {
-      salePrice = totalCost * (1 + (profitMargin / 100));
+      suggestedSalePrice = totalCost * (1 + (profitMargin / 100));
     }
 
-    return { ingredientsCost, frostingCost, totalCost, salePrice };
-  }, [items, variableCosts, packagingCost, profitMargin, pricingMethod, hasFrosting, selectedFrostings, safeRecipes, safeIngredients]);
+    const numericFixedSalePrice = parseCurrency(fixedSalePrice);
+    const salePrice = numericFixedSalePrice > 0 ? numericFixedSalePrice : suggestedSalePrice;
+
+    const profitValue = salePrice > 0 ? salePrice - totalCost : 0;
+
+    return { ingredientsCost, frostingCost, totalCost, suggestedSalePrice, salePrice, profitValue };
+  }, [items, variableCosts, packagingCost, profitMargin, pricingMethod, fixedSalePrice, hasFrosting, selectedFrostings, safeRecipes, safeIngredients]);
 
   const resetForm = () => {
     setRecipeName('');
@@ -193,6 +210,7 @@ export function RecipeBuilder({
     setVariableCosts(10);
     setPackagingCost('');
     setProfitMargin(100);
+    setFixedSalePrice('');
     setPricingMethod('markup');
     setIsFrosting(false);
     setSelectedIngredientId('');
@@ -226,6 +244,7 @@ export function RecipeBuilder({
       variableCostsPercentage: variableCosts,
       packagingCost: parseCurrency(packagingCost),
       profitMargin,
+      fixedSalePrice: parseCurrency(fixedSalePrice),
       pricingMethod,
       isFrosting,
       category,
@@ -543,33 +562,60 @@ export function RecipeBuilder({
                 <p className="text-primary-foreground/70 text-xs font-bold uppercase">Custo de Produção</p>
                 <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.totalCost)}</p>
               </div>
-              <div>
-                <p className="text-primary-foreground/70 text-xs font-bold uppercase">Sugestão de Venda</p>
-                <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.salePrice)}</p>
+              <div className="flex flex-col gap-2">
+                <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-wider">Calculadora de Sugestão</p>
+                <div className="flex items-center gap-2">
+                  <Select value={pricingMethod} onValueChange={(v: 'markup' | 'margin') => {
+                    setPricingMethod(v);
+                    if (v === 'margin' && profitMargin >= 100) setProfitMargin(99);
+                  }}>
+                    <SelectTrigger className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground h-10 flex-1 text-xs font-bold uppercase">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="markup">Markup (%)</SelectItem>
+                      <SelectItem value="margin">Margem Real (%)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input 
+                    type="number" 
+                    value={profitMargin} 
+                    onChange={e => {
+                      let val = Number(e.target.value) || 0;
+                      if (pricingMethod === 'margin' && val >= 100) val = 99;
+                      setProfitMargin(val);
+                    }}
+                    className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-lg font-bold h-10 w-20"
+                  />
+                </div>
+                <p className="text-sm font-bold mt-1 text-primary-foreground/90">Sugestão: {formatCurrency(calculations.suggestedSalePrice)}</p>
               </div>
-              <div className='max-w-40 mx-auto flex flex-col gap-2'>
-                <Select value={pricingMethod} onValueChange={(v: 'markup' | 'margin') => {
-                  setPricingMethod(v);
-                  if (v === 'margin' && profitMargin >= 100) setProfitMargin(99);
-                }}>
-                  <SelectTrigger className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground h-8 text-xs font-bold uppercase">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="markup">Markup (%)</SelectItem>
-                    <SelectItem value="margin">Margem Real (%)</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="flex flex-col gap-2 bg-primary-foreground/10 p-3 rounded-xl border border-primary-foreground/20 shadow-inner">
+                <p className="text-primary-foreground/90 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center">
+                  <span>Meu Preço Praticado</span>
+                </p>
                 <Input 
-                  type="number" 
-                  value={profitMargin} 
-                  onChange={e => {
-                    let val = Number(e.target.value) || 0;
-                    if (pricingMethod === 'margin' && val >= 100) val = 99;
-                    setProfitMargin(val);
-                  }}
-                  className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-xl font-bold h-12"
+                  type="text" 
+                  placeholder={formatCurrency(calculations.suggestedSalePrice)}
+                  value={fixedSalePrice} 
+                  onChange={handleFixedSalePriceChange}
+                  className="bg-white text-primary border-transparent text-center text-xl font-black h-10 shadow-sm rounded-lg"
                 />
+                <div className="flex justify-between items-center text-[10px] font-bold px-1 mt-1 uppercase tracking-tight">
+                  <span className="text-green-300">Lucro: {formatCurrency(calculations.profitValue)}</span>
+                  {(() => {
+                     const cmv = calculations.salePrice > 0 ? (calculations.totalCost / calculations.salePrice) * 100 : 0;
+                     let cmvColor = "text-green-300";
+                     if (cmv > 40) cmvColor = "text-red-300";
+                     else if (cmv > 35) cmvColor = "text-yellow-300";
+                     return (
+                       <span className={cmvColor} title="Custo da Mercadoria Vendida (Ideal: 25% a 35%)">
+                         CMV: {cmv.toFixed(1)}%
+                       </span>
+                     );
+                  })()}
+                </div>
               </div>
             </div>
           </CardContent>

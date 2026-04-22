@@ -7,7 +7,8 @@ import { formatCurrency, UNIT_LABELS, calculateRecipeCosts } from '@/lib/utils';
 import type { Recipe, Ingredient } from '@/lib/types';
 import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
-import { FileDown, Share2, Loader2 } from "lucide-react";
+import { FileDown, Share2, Loader2, Info } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,7 +30,7 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
 
   if (!recipe) return null;
 
-  const { totalCost, salePrice, ingredientsCost, frostingCost, frostingName, frostingsDetails } = calculateRecipeCosts(recipe, ingredients, recipes);
+  const { totalCost, salePrice, profitValue, ingredientsCost, frostingCost, frostingName, frostingsDetails } = calculateRecipeCosts(recipe, ingredients, recipes);
 
   const itemsWithCost = recipe.items.map(item => {
     const ingredient = ingredients.find(i => i.id === item.ingredientId);
@@ -231,12 +232,52 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
               </div>
             </div>
             
-            <div className="bg-green-50 border border-green-200 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-4 relative">
               <div className="text-center sm:text-left">
-                <p className="text-xs text-green-700 font-bold uppercase">Preço de Venda Sugerido</p>
-                <p className="text-xs text-green-600">({recipe.pricingMethod === 'margin' ? 'Margem Real' : 'Markup'} de {recipe.profitMargin}%)</p>
+                <p className="text-xs text-green-700 font-bold uppercase">{recipe.fixedSalePrice && recipe.fixedSalePrice > 0 ? "Preço de Venda Praticado" : "Preço de Venda Sugerido"}</p>
+                <p className="text-xs text-green-600">{recipe.fixedSalePrice && recipe.fixedSalePrice > 0 ? "(Definido Manualmente)" : `(${recipe.pricingMethod === 'margin' ? 'Margem Real' : 'Markup'} de ${recipe.profitMargin}%)`}</p>
               </div>
-              <p className="text-2xl font-bold text-green-700">{formatCurrency(salePrice)}</p>
+              <div className="flex items-center gap-4">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 border-green-200">
+                      <Info className="w-3.5 h-3.5 mr-1 text-blue-500" />
+                      Ver CMV
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-4" align="end">
+                    <div className="space-y-2">
+                      <h4 className="font-bold text-sm text-slate-800">Custo da Mercadoria Vendida (CMV)</h4>
+                      <p className="text-xs text-slate-600">
+                        O CMV indica quanto do seu preço de venda está sendo consumido pelos custos de produção.
+                      </p>
+                      <div className="bg-slate-50 p-3 rounded-md border text-sm mt-2">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-slate-500">Custo Total:</span>
+                          <span className="font-semibold">{formatCurrency(totalCost)}</span>
+                        </div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-slate-500">Venda:</span>
+                          <span className="font-semibold">{formatCurrency(salePrice)}</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t font-bold">
+                          <span>Seu CMV:</span>
+                          <span className={salePrice > 0 && (totalCost / salePrice) * 100 > 35 ? "text-red-500" : "text-green-600"}>
+                            {salePrice > 0 ? ((totalCost / salePrice) * 100).toFixed(1) : '0'}%
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground pt-1 italic">
+                        * O ideal na confeitaria é manter o CMV entre 25% e 35%.
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex flex-col items-end">
+                  <p className="text-2xl font-bold text-green-700">{formatCurrency(salePrice)}</p>
+                  <p className="text-xs font-semibold text-green-600 mt-0.5">Lucro: {formatCurrency(profitValue)}</p>
+                </div>
+              </div>
             </div>
             
             <div className="text-[10px] text-center text-slate-400 pt-4 italic border-t">
