@@ -185,29 +185,29 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
 
         <div className="max-h-[60vh] overflow-y-auto pr-4 space-y-6">
           {/* Container para o PDF (será capturado pelo html2canvas) */}
-          <div ref={pdfContentRef} className="p-4 bg-white text-slate-900 rounded-lg space-y-4 text-[13px]">
-            <div className="border-b pb-3">
-               <h2 className="text-lg font-bold text-pink-600 leading-tight">{recipe.name}</h2>
-               <p className="text-[10px] text-muted-foreground">{formatDate(recipe.createdAt)}</p>
+          <div ref={pdfContentRef} className="p-4 bg-white text-slate-900 rounded-lg space-y-3 text-[12px]">
+            <div className="border-b pb-2">
+               <h2 className="text-base font-bold text-pink-600 leading-tight">{recipe.name}</h2>
+               <p className="text-[9px] text-muted-foreground">{formatDate(recipe.createdAt)}</p>
             </div>
 
             <div>
-              <h3 className="font-semibold mb-1.5 text-xs">Ingredientes da Massa</h3>
+              <h3 className="font-semibold mb-1 text-[11px]">Ingredientes da Massa</h3>
               <div className="relative overflow-x-auto border rounded-md">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 h-8">
-                      <TableHead className="font-bold py-1 text-xs">Item</TableHead>
-                      <TableHead className="font-bold py-1 text-xs">Qtd.</TableHead>
-                      <TableHead className="text-right font-bold py-1 text-xs">Custo</TableHead>
+                    <TableRow className="bg-slate-50 h-7">
+                      <TableHead className="font-bold py-0.5 text-[11px]">Item</TableHead>
+                      <TableHead className="font-bold py-0.5 text-[11px]">Qtd.</TableHead>
+                      <TableHead className="text-right font-bold py-0.5 text-[11px]">Custo</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {itemsWithCost.map(item => (
-                      <TableRow key={item.id} className="h-8">
-                        <TableCell className="whitespace-nowrap py-1">{item.ingredientName}</TableCell>
-                        <TableCell className="text-muted-foreground whitespace-nowrap py-1">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
-                        <TableCell className="text-right font-semibold whitespace-nowrap py-1">{formatCurrency(item.cost)}</TableCell>
+                      <TableRow key={item.id} className="h-7 border-b last:border-0">
+                        <TableCell className="whitespace-nowrap py-0.5">{item.ingredientName}</TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap py-0.5">{item.displayQuantity} {UNIT_LABELS[item.displayUnit].split(' ')[0]}</TableCell>
+                        <TableCell className="text-right font-semibold whitespace-nowrap py-0.5">{formatCurrency(item.cost)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -216,8 +216,8 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
             </div>
 
             <div>
-              <h3 className="font-semibold mb-1.5 text-xs">Resumo Financeiro</h3>
-              <div className="space-y-1.5 text-xs p-3 bg-slate-50 border rounded-lg">
+              <h3 className="font-semibold mb-1 text-[11px]">Resumo Financeiro</h3>
+              <div className="space-y-1 text-[11px] p-2.5 bg-slate-50 border rounded-lg">
                 <div className="flex justify-between">
                   <span>Custo da Massa</span>
                   <span className="font-medium">{formatCurrency(ingredientsCost)}</span>
@@ -243,40 +243,40 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
                   <span>Embalagem</span>
                   <span className="font-medium">{formatCurrency(recipe.packagingCost)}</span>
                 </div>
-                <Separator className="my-1.5 bg-slate-200" />
-                <div className="flex justify-between font-bold text-sm">
+                <Separator className="my-1 bg-slate-200" />
+                <div className="flex justify-between font-bold text-xs">
                   <span className="text-slate-700">CUSTO TOTAL</span>
                   <span className="text-pink-600">{formatCurrency(totalCost)}</span>
                 </div>
               </div>
             </div>
             
-            <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-4 relative">
+            <div className="bg-green-50 border border-green-200 p-2.5 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-3 relative">
               <div className="text-center sm:text-left">
-                <p className="text-[10px] text-green-700 font-bold uppercase leading-tight">{recipe.fixedSalePrice && recipe.fixedSalePrice > 0 ? "Preço de Venda Praticado" : "Preço de Venda Sugerido"}</p>
-                <p className="text-[9px] text-green-600 leading-tight">{recipe.fixedSalePrice && recipe.fixedSalePrice > 0 ? "(Definido Manualmente)" : `(${recipe.pricingMethod === 'margin' ? 'Margem Real' : 'Markup'} de ${recipe.profitMargin}%)`}</p>
+                <p className="text-[9px] text-green-700 font-bold uppercase leading-tight">{recipe.fixedSalePrice && recipe.fixedSalePrice > 0 ? "Preço de Venda Praticado" : "Preço de Venda Sugerido"}</p>
+                <p className="text-[8px] text-green-600 leading-tight">{recipe.fixedSalePrice && recipe.fixedSalePrice > 0 ? "(Definido Manualmente)" : `(${recipe.pricingMethod === 'margin' ? 'Margem Real' : 'Markup'} de ${recipe.profitMargin}%)`}</p>
                 
-                <div className="mt-2 pt-2 border-t border-green-200/50 flex items-center gap-3">
+                <div className="mt-1.5 pt-1.5 border-t border-green-200/50 flex items-center gap-2.5">
                   <div className="flex flex-col">
-                    <span className="text-[8px] uppercase font-bold text-green-800/60">CMV</span>
-                    <span className={`text-xs font-bold ${salePrice > 0 && (totalCost / salePrice) * 100 > 35 ? "text-red-500" : "text-green-700"}`}>
+                    <span className="text-[7px] uppercase font-bold text-green-800/60 leading-none">CMV</span>
+                    <span className={`text-[11px] font-bold ${salePrice > 0 && (totalCost / salePrice) * 100 > 35 ? "text-red-500" : "text-green-700"} leading-tight`}>
                       {salePrice > 0 ? ((totalCost / salePrice) * 100).toFixed(1) : '0'}%
                     </span>
                   </div>
-                  <div className="h-6 w-px bg-green-200/50" />
+                  <div className="h-5 w-px bg-green-200/50" />
                   <div className="flex flex-col">
-                    <span className="text-[8px] uppercase font-bold text-green-800/60">Lucro</span>
-                    <span className="text-xs font-bold text-green-700">{formatCurrency(profitValue)}</span>
+                    <span className="text-[7px] uppercase font-bold text-green-800/60 leading-none">Lucro</span>
+                    <span className="text-[11px] font-bold text-green-700 leading-tight">{formatCurrency(profitValue)}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 {!isGeneratingPDF && (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] font-semibold text-slate-600 bg-white hover:bg-slate-50 border-green-200">
-                        <Info className="w-3 h-3 mr-1 text-blue-500" />
+                      <Button variant="outline" size="sm" className="h-6 px-1.5 text-[9px] font-semibold text-slate-600 bg-white hover:bg-slate-50 border-green-200">
+                        <Info className="w-2.5 h-2.5 mr-1 text-blue-500" />
                         Ver CMV
                       </Button>
                     </PopoverTrigger>
@@ -310,13 +310,13 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
                   </Popover>
                 )}
                 <div className="flex flex-col items-end">
-                  <p className="text-[10px] text-green-600 font-bold uppercase leading-tight">Venda</p>
-                  <p className="text-2xl font-bold text-green-700 leading-tight">{formatCurrency(salePrice)}</p>
+                  <p className="text-[9px] text-green-600 font-bold uppercase leading-tight">Venda</p>
+                  <p className="text-xl font-bold text-green-700 leading-tight">{formatCurrency(salePrice)}</p>
                 </div>
               </div>
             </div>
             
-            <div className="text-[10px] text-center text-slate-400 pt-4 italic border-t">
+            <div className="text-[8px] text-center text-slate-400 pt-2 italic border-t">
                Gerado por Doce Estimativa - Gestão Profissional de Custos
             </div>
           </div>
