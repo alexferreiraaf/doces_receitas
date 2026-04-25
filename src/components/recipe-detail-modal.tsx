@@ -58,14 +58,18 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
     setIsGeneratingPDF(true);
     try {
       // Pequeno atraso para garantir que tudo esteja renderizado
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 400));
       
       const element = pdfContentRef.current;
       const canvas = await html2canvas(element, {
         scale: 2, // Melhor qualidade
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        // Garante que capture todo o conteúdo mesmo com scroll
+        windowHeight: element.scrollHeight,
+        windowWidth: element.scrollWidth,
+        scrollY: -window.scrollY // Previne desalinhamento se houver scroll na página
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -73,8 +77,23 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
       const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      let heightLeft = pdfHeight;
+      let position = 0;
+
+      // Adiciona a primeira página
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      // Adiciona páginas subsequentes se necessário
+      while (heightLeft > 0) {
+        position -= pageHeight; // Move o "viewport" do PDF para baixo na imagem
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
       return pdf.output('blob');
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
