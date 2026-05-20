@@ -50,17 +50,58 @@ export function calculateRecipeCosts(
   const recipeMap = new Map(allRecipes.map(r => [r.id, r]));
 
   // Memoization map for the recursive calculation within a single run
-  const memo = new Map<string, { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null, frostingsDetails?: { name: string; cost: number; quantity: number }[] }>();
+  const memo = new Map<string, { 
+    totalCost: number; 
+    suggestedSalePrice: number; 
+    salePrice: number; 
+    profitValue: number; 
+    ingredientsCost: number; 
+    frostingCost: number; 
+    frostingName: string | null; 
+    frostingsDetails?: { name: string; cost: number; quantity: number }[];
+    recipeYield: number;
+    costPerPortion: number;
+    suggestedSalePricePerPortion: number;
+    salePricePerPortion: number;
+    profitValuePerPortion: number;
+  }>();
   // Visited set to prevent infinite recursion
   const visited = new Set<string>();
 
-  function calculate(recipeToCalc: Recipe): { totalCost: number; salePrice: number; ingredientsCost: number; frostingCost: number, frostingName: string | null, frostingsDetails?: { name: string; cost: number; quantity: number }[] } {
+  function calculate(recipeToCalc: Recipe): { 
+    totalCost: number; 
+    suggestedSalePrice: number; 
+    salePrice: number; 
+    profitValue: number; 
+    ingredientsCost: number; 
+    frostingCost: number; 
+    frostingName: string | null; 
+    frostingsDetails?: { name: string; cost: number; quantity: number }[];
+    recipeYield: number;
+    costPerPortion: number;
+    suggestedSalePricePerPortion: number;
+    salePricePerPortion: number;
+    profitValuePerPortion: number;
+  } {
     if (memo.has(recipeToCalc.id)) {
       return memo.get(recipeToCalc.id)!;
     }
 
     if (visited.has(recipeToCalc.id)) {
-      return { totalCost: 0, salePrice: 0, ingredientsCost: 0, frostingCost: 0, frostingName: 'Erro: Loop de Cobertura' };
+      return { 
+        totalCost: 0, 
+        suggestedSalePrice: 0, 
+        salePrice: 0, 
+        profitValue: 0, 
+        ingredientsCost: 0, 
+        frostingCost: 0, 
+        frostingName: 'Erro: Loop de Cobertura',
+        recipeYield: 1,
+        costPerPortion: 0,
+        suggestedSalePricePerPortion: 0,
+        salePricePerPortion: 0,
+        profitValuePerPortion: 0
+      };
     }
 
     visited.add(recipeToCalc.id);
@@ -110,6 +151,7 @@ export function calculateRecipeCosts(
     const profitMargin = recipeToCalc.profitMargin || 0;
     const pricingMethod = recipeToCalc.pricingMethod || 'markup';
     const fixedSalePrice = recipeToCalc.fixedSalePrice || 0;
+    const rYield = recipeToCalc.yield || 1;
 
     const totalIngredientsCost = ingredientsCost + frostingCost;
     const variableCostValue = totalIngredientsCost * (variableCostsPercentage / 100);
@@ -125,7 +167,21 @@ export function calculateRecipeCosts(
     const salePrice = fixedSalePrice > 0 ? fixedSalePrice : suggestedSalePrice;
     const profitValue = salePrice > 0 ? salePrice - totalCost : 0;
 
-    const result = { totalCost, suggestedSalePrice, salePrice, profitValue, ingredientsCost, frostingCost, frostingName, frostingsDetails };
+    const result = { 
+      totalCost, 
+      suggestedSalePrice, 
+      salePrice, 
+      profitValue, 
+      ingredientsCost, 
+      frostingCost, 
+      frostingName, 
+      frostingsDetails,
+      recipeYield: rYield,
+      costPerPortion: totalCost / rYield,
+      suggestedSalePricePerPortion: suggestedSalePrice / rYield,
+      salePricePerPortion: salePrice / rYield,
+      profitValuePerPortion: profitValue / rYield
+    };
     memo.set(recipeToCalc.id, result);
     visited.delete(recipeToCalc.id);
     return result;

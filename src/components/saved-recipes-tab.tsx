@@ -184,7 +184,13 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
               
               <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                 {categoryRecipes.map(recipe => {
-                  const { totalCost, salePrice } = calculateRecipeCosts(recipe, ingredients, recipes);
+                  const { 
+                    totalCost, 
+                    salePrice, 
+                    recipeYield, 
+                    costPerPortion, 
+                    salePricePerPortion 
+                  } = calculateRecipeCosts(recipe, ingredients, recipes);
                   return (
                     <Card 
                       key={recipe.id}
@@ -203,6 +209,11 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
                                     Cobertura
                                   </Badge>
                                 )}
+                                {recipeYield > 1 && (
+                                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] px-1.5 py-0 uppercase font-bold tracking-wider">
+                                    {recipeYield} fatias
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">{formatDate(recipe.createdAt)}</p>
                             </div>
@@ -216,10 +227,20 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
                             <div>
                               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Custo</p>
                               <p className="font-bold text-primary text-base">{formatCurrency(totalCost)}</p>
+                              {recipeYield > 1 && (
+                                <p className="text-[10px] text-muted-foreground/80 font-semibold mt-0.5">
+                                  {formatCurrency(costPerPortion)} <span className="text-[9px] font-normal">/fatia</span>
+                                </p>
+                              )}
                             </div>
                             <div className="text-right">
                               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Venda Sugerida</p>
                               <p className="font-bold text-green-600 text-base">{formatCurrency(salePrice)}</p>
+                              {recipeYield > 1 && (
+                                <p className="text-[10px] text-green-600/80 font-semibold mt-0.5">
+                                  {formatCurrency(salePricePerPortion)} <span className="text-[9px] font-normal">/fatia</span>
+                                </p>
+                              )}
                             </div>
                           </div>
                         </CardContent>

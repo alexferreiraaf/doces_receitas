@@ -30,7 +30,19 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
 
   if (!recipe) return null;
 
-  const { totalCost, salePrice, profitValue, ingredientsCost, frostingCost, frostingName, frostingsDetails } = calculateRecipeCosts(recipe, ingredients, recipes);
+  const { 
+    totalCost, 
+    salePrice, 
+    profitValue, 
+    ingredientsCost, 
+    frostingCost, 
+    frostingName, 
+    frostingsDetails,
+    recipeYield,
+    costPerPortion,
+    salePricePerPortion,
+    profitValuePerPortion
+  } = calculateRecipeCosts(recipe, ingredients, recipes);
 
   const itemsWithCost = recipe.items.map(item => {
     const ingredient = ingredients.find(i => i.id === item.ingredientId);
@@ -156,13 +168,15 @@ export function RecipeDetailModal({ recipe, ingredients, recipes, isOpen, setIsO
       frostingPart = `\n\nCobertura: ${frostingName} (${formatCurrency(frostingCost)})`;
     }
 
+    const yieldText = recipeYield > 1 ? `\nRendimento: ${recipeYield} fatias\nCusto por fatia: ${formatCurrency(costPerPortion)}\nPreço de Venda por fatia: ${formatCurrency(salePricePerPortion)}\n` : '';
+
     const shareableText = `
 Receita: ${recipe.name}
-
+${yieldText}
 Ingredientes:
 ${recipe.items.map(i => `- ${i.ingredientName}: ${i.displayQuantity} ${UNIT_LABELS[i.displayUnit].split(' ')[0]}`).join('\n')}${frostingPart}
 
-Custo Total: ${formatCurrency(totalCost)}
+Custo Total de Produção: ${formatCurrency(totalCost)}
 Preço de Venda Sugerido: ${formatCurrency(salePrice)}
 `;
     if (navigator.clipboard) {
@@ -245,9 +259,18 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
                 </div>
                 <Separator className="my-1 bg-slate-200" />
                 <div className="flex justify-between font-bold text-xs">
-                  <span className="text-slate-700">CUSTO TOTAL</span>
+                  <span className="text-slate-700">CUSTO TOTAL DE PRODUÇÃO</span>
                   <span className="text-pink-600">{formatCurrency(totalCost)}</span>
                 </div>
+                {recipeYield > 1 && (
+                  <>
+                    <Separator className="my-1 bg-slate-200 border-dashed" />
+                    <div className="flex justify-between font-bold text-[11px] text-pink-600 bg-pink-50 p-1.5 rounded">
+                      <span>CUSTO POR FATIA / PORÇÃO ({recipeYield} fatias)</span>
+                      <span>{formatCurrency(costPerPortion)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             
@@ -266,7 +289,10 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
                   <div className="h-5 w-px bg-green-200/50" />
                   <div className="flex flex-col">
                     <span className="text-[7px] uppercase font-bold text-green-800/60 leading-none">Lucro</span>
-                    <span className="text-[11px] font-bold text-green-700 leading-tight">{formatCurrency(profitValue)}</span>
+                    <span className="text-[11px] font-bold text-green-700 leading-tight">
+                      {formatCurrency(profitValue)}
+                      {recipeYield > 1 && <span className="text-[9px] font-semibold text-green-600/80"> ({formatCurrency(profitValuePerPortion)}/f.)</span>}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -310,8 +336,15 @@ Preço de Venda Sugerido: ${formatCurrency(salePrice)}
                   </Popover>
                 )}
                 <div className="flex flex-col items-end">
-                  <p className="text-[9px] text-green-600 font-bold uppercase leading-tight">Venda</p>
-                  <p className="text-xl font-bold text-green-700 leading-tight">{formatCurrency(salePrice)}</p>
+                  <p className="text-[9px] text-green-600 font-bold uppercase leading-tight">
+                    {recipeYield > 1 ? "Venda Total" : "Venda"}
+                  </p>
+                  <p className="text-base font-bold text-green-700 leading-tight">{formatCurrency(salePrice)}</p>
+                  {recipeYield > 1 && (
+                    <p className="text-[11px] font-extrabold text-pink-600 bg-pink-100/50 px-1 rounded leading-none mt-1 shadow-sm">
+                      {formatCurrency(salePricePerPortion)} / fatia
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

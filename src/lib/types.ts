@@ -37,6 +37,7 @@ export type Recipe = {
   isFrosting: boolean; // Flag to identify if the recipe is a base frosting/filling
   frostingId?: string | null;
   frostings?: RecipeFrosting[];
+  yield?: number; // Quantidade de porções ou fatias que a receita rende
 
   // Calculated at runtime
   totalCost?: number;

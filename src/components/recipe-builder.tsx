@@ -44,6 +44,7 @@ export function RecipeBuilder({
   const [pricingMethod, setPricingMethod] = useState<'markup' | 'margin' | 'fixed'>('markup');
   const [isFrosting, setIsFrosting] = useState(false);
   const [category, setCategory] = useState('Simples');
+  const [recipeYield, setRecipeYield] = useState<number>(1);
   const { toast } = useToast();
 
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
@@ -86,6 +87,7 @@ export function RecipeBuilder({
       setPricingMethod(recipeToEdit.pricingMethod || 'markup');
       setIsFrosting(recipeToEdit.isFrosting || false);
       setCategory(recipeToEdit.category || (recipeToEdit.isFrosting ? 'Cobertura' : 'Simples'));
+      setRecipeYield(recipeToEdit.yield || 1);
       
       let initialFrostings = recipeToEdit.frostings ? [...recipeToEdit.frostings] : [];
       if (recipeToEdit.frostingId && initialFrostings.length === 0) {
@@ -201,8 +203,19 @@ export function RecipeBuilder({
 
     const profitValue = salePrice > 0 ? salePrice - totalCost : 0;
 
-    return { ingredientsCost, frostingCost, totalCost, suggestedSalePrice, salePrice, profitValue };
-  }, [items, variableCosts, packagingCost, profitMargin, pricingMethod, fixedSalePrice, hasFrosting, selectedFrostings, safeRecipes, safeIngredients]);
+    return { 
+      ingredientsCost, 
+      frostingCost, 
+      totalCost, 
+      suggestedSalePrice, 
+      salePrice, 
+      profitValue,
+      costPerPortion: totalCost / recipeYield,
+      suggestedSalePricePerPortion: suggestedSalePrice / recipeYield,
+      salePricePerPortion: salePrice / recipeYield,
+      profitValuePerPortion: profitValue / recipeYield
+    };
+  }, [items, variableCosts, packagingCost, profitMargin, pricingMethod, fixedSalePrice, hasFrosting, selectedFrostings, safeRecipes, safeIngredients, recipeYield]);
 
   const resetForm = () => {
     setRecipeName('');
@@ -221,6 +234,7 @@ export function RecipeBuilder({
     setFrostingToAddId('');
     setFrostingQuantityToAdd('1');
     setCategory('Simples');
+    setRecipeYield(1);
   }
 
   const handleCancelEdit = () => {
@@ -250,6 +264,7 @@ export function RecipeBuilder({
       category,
       frostingId: hasFrosting && selectedFrostings.length > 0 ? selectedFrostings[0].id : null,
       frostings: hasFrosting ? selectedFrostings : [],
+      yield: recipeYield,
     };
 
     onSaveRecipe(recipeData as Omit<Recipe, 'id' | 'createdAt'>);
@@ -500,7 +515,7 @@ export function RecipeBuilder({
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-6">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Custos Variáveis (%)</label>
                 <Input type="number" value={variableCosts} onChange={e => setVariableCosts(Number(e.target.value) || 0)} />
@@ -512,6 +527,15 @@ export function RecipeBuilder({
                   placeholder="R$ 0,00"
                   value={packagingCost} 
                   onChange={handlePackagingCostChange} 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Rendimento (Fatias/Porções)</label>
+                <Input 
+                  type="number" 
+                  min="1"
+                  value={recipeYield} 
+                  onChange={e => setRecipeYield(Math.max(1, Number(e.target.value) || 1))} 
                 />
               </div>
             </div>
@@ -548,9 +572,18 @@ export function RecipeBuilder({
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between font-bold text-base">
-                  <span>CUSTO DE PRODUÇÃO</span>
+                  <span>CUSTO DE PRODUÇÃO TOTAL</span>
                   <span className="text-primary">{formatCurrency(calculations.totalCost)}</span>
               </div>
+              {recipeYield > 1 && (
+                <>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between font-bold text-sm text-pink-600 bg-pink-50/50 p-2 rounded-md">
+                      <span>CUSTO POR FATIA / PORÇÃO ({recipeYield} fatias)</span>
+                      <span>{formatCurrency(calculations.costPerPortion)}</span>
+                  </div>
+                </>
+              )}
           </CardContent>
       </Card>
 
@@ -561,6 +594,11 @@ export function RecipeBuilder({
               <div>
                 <p className="text-primary-foreground/70 text-xs font-bold uppercase">Custo de Produção</p>
                 <p className="text-2xl md:text-3xl font-bold">{formatCurrency(calculations.totalCost)}</p>
+                {recipeYield > 1 && (
+                  <p className="text-[10px] text-primary-foreground/80 mt-1 font-semibold">
+                    ({formatCurrency(calculations.costPerPortion)} / fatia)
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-wider">Calculadora de Sugestão</p>
@@ -588,7 +626,10 @@ export function RecipeBuilder({
                     className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/50 text-center text-lg font-bold h-10 w-20"
                   />
                 </div>
-                <p className="text-sm font-bold mt-1 text-primary-foreground/90">Sugestão: {formatCurrency(calculations.suggestedSalePrice)}</p>
+                <p className="text-sm font-bold mt-1 text-primary-foreground/90">
+                  Sugestão: {formatCurrency(calculations.suggestedSalePrice)}
+                  {recipeYield > 1 && ` (${formatCurrency(calculations.suggestedSalePricePerPortion)}/f.)`}
+                </p>
               </div>
 
               <div className="flex flex-col gap-2 bg-primary-foreground/10 p-3 rounded-xl border border-primary-foreground/20 shadow-inner">
@@ -602,8 +643,16 @@ export function RecipeBuilder({
                   onChange={handleFixedSalePriceChange}
                   className="bg-white text-primary border-transparent text-center text-xl font-black h-10 shadow-sm rounded-lg"
                 />
-                <div className="flex justify-between items-center text-[10px] font-bold px-1 mt-1 uppercase tracking-tight">
-                  <span className="text-green-300">Lucro: {formatCurrency(calculations.profitValue)}</span>
+                {recipeYield > 1 && (
+                  <p className="text-[10px] text-white/90 text-center font-bold">
+                    Praticado por fatia: {formatCurrency(calculations.salePricePerPortion)}
+                  </p>
+                )}
+                <div className="flex justify-between items-center text-[10px] font-bold px-1 mt-1 uppercase tracking-tight border-t border-primary-foreground/10 pt-1">
+                  <span className="text-green-300">
+                    Lucro: {formatCurrency(calculations.profitValue)}
+                    {recipeYield > 1 && ` (${formatCurrency(calculations.profitValuePerPortion)}/f.)`}
+                  </span>
                   {(() => {
                      const cmv = calculations.salePrice > 0 ? (calculations.totalCost / calculations.salePrice) * 100 : 0;
                      let cmvColor = "text-green-300";

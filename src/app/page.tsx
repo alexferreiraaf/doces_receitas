@@ -111,6 +111,7 @@ export default function Home() {
       category: recipeData.category,
       frostingId: recipeData.frostingId || null,
       frostings: recipeData.frostings || [],
+      yield: recipeData.yield || 1,
     };
 
     if (recipeToEdit) { // Editing
@@ -163,6 +164,7 @@ export default function Home() {
       frostingId: recipe.frostingId || null,
       frostings: recipe.frostings || [],
       category: recipe.category || 'Simples',
+      yield: recipe.yield || 1,
       id,
       createdAt: new Date().toISOString()
     };
