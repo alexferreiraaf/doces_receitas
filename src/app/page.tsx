@@ -58,6 +58,49 @@ export default function Home() {
     }
   }, [user, categoriesData, firestore]);
 
+  // Automatically clean up duplicate and unused categories once
+  useEffect(() => {
+    if (user && categoriesData !== null && recipesData !== null) {
+      const hasCleanedUp = localStorage.getItem(`db_categories_cleaned_${user.uid}`);
+      if (!hasCleanedUp) {
+        // Identify all unique category names currently used by recipes
+        const usedCategoryNames = new Set(recipesData.map(r => r.category).filter(Boolean));
+        
+        // Ensure UI defaults are always kept
+        usedCategoryNames.add('Cobertura');
+        usedCategoryNames.add('Simples');
+        
+        const seenNames = new Set<string>();
+        let redundantCount = 0;
+        
+        categoriesData.forEach(cat => {
+          if (!cat.name) return;
+          const normalized = cat.name.trim();
+          
+          const isDuplicate = seenNames.has(normalized);
+          const isUnused = !usedCategoryNames.has(normalized);
+          
+          if (isDuplicate || isUnused) {
+            const catRef = doc(firestore, 'users', user.uid, 'categories', cat.id);
+            deleteDocumentNonBlocking(catRef);
+            redundantCount++;
+          } else {
+            seenNames.add(normalized);
+          }
+        });
+        
+        localStorage.setItem(`db_categories_cleaned_${user.uid}`, 'true');
+        
+        if (redundantCount > 0) {
+          toast({
+            title: "Categorias otimizadas!",
+            description: `Removemos automaticamente ${redundantCount} categoria(s) duplicada(s) ou não utilizada(s).`,
+          });
+        }
+      }
+    }
+  }, [user, categoriesData, recipesData, firestore, toast]);
+
   const handleSaveIngredient = (ingredientData: Omit<Ingredient, 'id'>) => {
     if (!user) return;
   
