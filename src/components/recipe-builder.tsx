@@ -65,6 +65,19 @@ export function RecipeBuilder({
     return safeRecipes.filter(r => r.isFrosting && r.id !== recipeToEdit?.id);
   }, [safeRecipes, recipeToEdit]);
 
+  // Filter duplicate categories by name to prevent Select components from rendering concatenated text
+  const uniqueCategories = useMemo(() => {
+    if (!categories) return null;
+    const seen = new Set<string>();
+    return categories.filter(cat => {
+      if (!cat.name) return false;
+      const normalized = cat.name.trim();
+      if (seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    });
+  }, [categories]);
+
   useEffect(() => {
     if (recipeToEdit) {
       const ingredientMap = new Map(safeIngredients.map(i => [i.id, i]));
@@ -359,8 +372,8 @@ export function RecipeBuilder({
                     <SelectValue placeholder="Categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories && categories.length > 0 ? (
-                      categories.map(cat => (
+                    {uniqueCategories && uniqueCategories.length > 0 ? (
+                      uniqueCategories.map(cat => (
                         <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                       ))
                     ) : (
@@ -477,8 +490,8 @@ export function RecipeBuilder({
                                 </Select>
                                 <Input 
                                   type="number" 
-                                  step="0.1" 
-                                  placeholder="Qtd (ex: 0.5)" 
+                                  step="0.01" 
+                                  placeholder="Qtd (ex: 0.32)" 
                                   className="w-full sm:w-32 shrink-0" 
                                   value={frostingQuantityToAdd} 
                                   onChange={e => setFrostingQuantityToAdd(e.target.value)} 

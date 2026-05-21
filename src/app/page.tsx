@@ -48,7 +48,7 @@ export default function Home() {
 
   // Initialize default categories for new users
   useEffect(() => {
-    if (user && !categoriesLoading && categories.length === 0) {
+    if (user && categoriesData !== null && categoriesData.length === 0) {
       const defaultCategories = ['Vulcão', 'Simples', 'Piscina', 'Doces'];
       defaultCategories.forEach(catName => {
         const id = doc(collection(firestore, 'users', user.uid, 'categories')).id;
@@ -56,7 +56,7 @@ export default function Home() {
         setDocumentNonBlocking(catRef, { id, name: catName }, { merge: true });
       });
     }
-  }, [user, categoriesLoading, categories.length, firestore]);
+  }, [user, categoriesData, firestore]);
 
   const handleSaveIngredient = (ingredientData: Omit<Ingredient, 'id'>) => {
     if (!user) return;
