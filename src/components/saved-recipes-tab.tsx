@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { formatCurrency, calculateRecipeCosts } from '@/lib/utils';
 import type { Recipe, Ingredient } from '@/lib/types';
 import { RecipeDetailModal } from './recipe-detail-modal';
-import { Search, Pencil, Trash2, Copy, ChefHat, ChevronDown, CalendarDays, ArrowDownAZ, TrendingDown, TrendingUp } from 'lucide-react';
+import { Search, Pencil, Trash2, Copy, ChefHat, ChevronDown, CalendarDays, ArrowDownAZ, TrendingDown, TrendingUp, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -90,6 +92,47 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
     return groups;
   }, [recipes, searchQuery, sortBy, ingredients]);
 
+  const handleGeneratePDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.setTextColor(219, 39, 119); // Primary color
+    doc.text('Doce Estimativa - Minhas Receitas', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 30);
+
+    const tableData: any[] = [];
+    
+    Object.entries(groupedRecipes).sort().forEach(([category, categoryRecipes]) => {
+      // Add category row
+      tableData.push([{ content: category, colSpan: 5, styles: { fillColor: [252, 228, 236], textColor: [219, 39, 119], fontStyle: 'bold' } }]);
+      
+      categoryRecipes.forEach(recipe => {
+        const { totalCost, salePrice, recipeYield } = calculateRecipeCosts(recipe, ingredients, recipes);
+        tableData.push([
+          recipe.name,
+          recipe.isFrosting ? 'Cobertura/Recheio' : 'Massa/Base',
+          formatCurrency(totalCost),
+          formatCurrency(salePrice),
+          recipeYield > 1 ? `${recipeYield} porções` : '1 porção'
+        ]);
+      });
+    });
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Nome da Receita', 'Tipo', 'Custo Total', 'Preço Sugerido', 'Rendimento']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [219, 39, 119] },
+    });
+
+    doc.save('minhas-receitas.pdf');
+  };
+
 
   return (
     <>
@@ -151,6 +194,10 @@ export function SavedRecipesTab({ recipes, ingredients, onDeleteRecipe, onEditRe
                 </SelectContent>
               </Select>
             </div>
+            <Button onClick={handleGeneratePDF} className="h-11 px-6 rounded-xl shadow-sm gap-2 whitespace-nowrap w-full md:w-auto">
+              <Download className="w-4 h-4" />
+              Gerar PDF
+            </Button>
           </div>
 
           {Object.keys(groupedRecipes).length === 0 ? (
